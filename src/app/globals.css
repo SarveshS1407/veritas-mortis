@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════
+   VERITAS MORTIS — Global Design Tokens
+   Aesthetic: "Macabre Realism" / "Analog Gothic"
+   ═══════════════════════════════════════════════════════ */
+
+@theme inline {
+  /* ── Core Palette ── */
+  --color-pitch: #050505;
+  --color-leather: #121010;
+  --color-charcoal: #1A1714;
+  --color-parchment: #D4C5A9;
+  --color-bone: #E8E3D9;
+  --color-crimson: #6B0000;
+  --color-blood: #8B0000;
+  --color-rust: #4A1A1A;
+  --color-ink: #2A2520;
+
+  --font-horror: var(--font-horror), "Nosifer", cursive;
+  --font-serif: var(--font-playfair), "Cinzel", Georgia, serif;
+  --font-mono: var(--font-ibm-mono), "IBM Plex Mono", "Courier New", monospace;
+  --font-handwriting: var(--font-caveat), "Caveat", cursive;
+  --font-bloody: var(--font-rock-salt), "Rock Salt", cursive;
+
+  /* ── Spacing & Sizing ── */
+  --spacing-panel: 1.5rem;
+}
+
+/* ── Base Layer ── */
+body {
+  background-color: var(--color-pitch);
+  color: var(--color-bone);
+  font-family: var(--font-serif);
+  cursor: default;
+}
+
+/* ── Selection Highlight ── */
+::selection {
+  background-color: var(--color-crimson);
+  color: var(--color-bone);
+}
+
+/* ── Scrollbar Styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-pitch);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-rust);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-crimson);
+}
+/* ═══════════════════════════════════════════════════════
+   ANIMATIONS — AAA-Quality Effects
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes light-flicker {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  5% { opacity: 0.85; filter: brightness(0.8); }
+  5.5% { opacity: 1; filter: brightness(1.1); }
+  40% { opacity: 1; filter: brightness(1); }
+  41% { opacity: 0.5; filter: brightness(0.5); }
+  41.5% { opacity: 0.9; filter: brightness(0.9); }
+  42% { opacity: 1; filter: brightness(1.1); }
+  78% { opacity: 1; filter: brightness(1); }
+  78.5% { opacity: 0.6; filter: brightness(0.6); }
+  79% { opacity: 1; filter: brightness(1); }
+}
+
+@keyframes smoke-drift-left {
+  0% { transform: translateX(0%) scaleX(1); }
+  50% { transform: translateX(-8%) scaleX(1.1); }
+  100% { transform: translateX(0%) scaleX(1); }
+}
+
+@keyframes smoke-drift-right {
+  0% { transform: translateX(0%) scaleX(1); }
+  50% { transform: translateX(8%) scaleX(1.05); }
+  100% { transform: translateX(0%) scaleX(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 10px rgba(107,0,0,0.4), 0 0 40px rgba(107,0,0,0.1); }
+  50% { text-shadow: 0 0 20px rgba(107,0,0,0.8), 0 0 60px rgba(107,0,0,0.4), 0 0 120px rgba(107,0,0,0.15); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.04); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.06); }
+  56% { transform: scale(1); }
+}
+
+@keyframes screen-flash {
+  0%, 95%, 100% { opacity: 0; }
+  96% { opacity: 0.04; }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slide-up {
+  0% { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes text-reveal {
+  0% { clip-path: inset(0 100% 0 0); }
+  100% { clip-path: inset(0 0% 0 0); }
+}
