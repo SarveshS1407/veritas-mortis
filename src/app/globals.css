@@ -17,6 +17,23 @@
   --color-rust: #4A1A1A;
   --color-ink: #2A2520;
 
+  /* ── AAA Detective Scene Color Tokens ── */
+  --color-walnut-deep: #160F0B;
+  --color-walnut-mid: #201610;
+  --color-umber: #3B2A1E;
+  --color-aged-leather: #4A3018;
+  --color-olive-muted: #2D322B;
+  --color-slate-dark: #282C34;
+  --color-antique-brass: #8A6830;
+  --color-aged-gold: #C9A227;
+  --color-bone-white: #E8E0D0;
+  --color-parchment-warm: #F5EDD8;
+  --color-old-paper: #D2C4B0;
+  --color-gunmetal: #3A3F48;
+  --color-forensic-maroon: #3A0A0A;
+  --color-ink-crimson: #7A0000;
+  --color-dried-blood: #2D1010;
+
   --font-horror: var(--font-horror), "Nosifer", cursive;
   --font-serif: var(--font-playfair), "Cinzel", Georgia, serif;
   --font-mono: var(--font-ibm-mono), "IBM Plex Mono", "Courier New", monospace;
@@ -118,4 +135,158 @@ body {
 @keyframes text-reveal {
   0% { clip-path: inset(0 100% 0 0); }
   100% { clip-path: inset(0 0% 0 0); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ENVIRONMENT — Detective Office Atmosphere
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes clock-second {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes vehicle-pass {
+  0% { transform: translateX(100vw) skewX(-5deg); }
+  100% { transform: translateX(-100vw) skewX(-5deg); }
+}
+
+@keyframes string-flutter {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(1.5px); }
+}
+
+@keyframes stamp-slam {
+  0% { transform: scale(2.5) rotate(0deg); opacity: 0; }
+  60% { transform: scale(1.05) rotate(-8deg); opacity: 1; }
+  80% { transform: scale(0.98) rotate(-6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-7deg); opacity: 1; }
+}
+
+/* ── New AAA environment animations ── */
+@keyframes lens-pulse {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes evidence-tag-wobble {
+  0%, 100% { transform: rotate(-1deg); }
+  50% { transform: rotate(1.5deg); }
+}
+
+@keyframes flashlight-sweep {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+@keyframes dust-float {
+  0% { transform: translateY(0px) translateX(0px); opacity: 0; }
+  20% { opacity: 0.4; }
+  80% { opacity: 0.2; }
+  100% { transform: translateY(-40px) translateX(8px); opacity: 0; }
+}
+
+@keyframes paper-edge-settle {
+  0% { transform: translateY(-3px) rotate(0.5deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+/* ── Reduced motion: disable all decorative animations ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   FORENSIC DIEGETIC SHADERS & PHYSICAL TEXTURE MATRICES
+   ═══════════════════════════════════════════════════════ */
+
+/* --- 300 GSM Heavy Kraft Pressboard Texture --- */
+.texture-kraft-pressboard {
+  background-color: #7d5b38;
+  background-image: 
+    radial-gradient(ellipse at 50% 50%, rgba(255, 230, 190, 0.08) 0%, rgba(30, 18, 10, 0.45) 100%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.03) 0px, rgba(0, 0, 0, 0.03) 2px, transparent 2px, transparent 4px),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.35  0 0 0 0 0.25  0 0 0 0 0.15  0 0 0 0.45 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  box-shadow:
+    inset 0 1px 3px rgba(255, 255, 255, 0.18),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.65),
+    inset 2px 0 4px rgba(255, 255, 255, 0.08),
+    inset -2px 0 4px rgba(0, 0, 0, 0.5),
+    0 15px 35px -5px rgba(0, 0, 0, 0.85),
+    0 5px 15px rgba(0, 0, 0, 0.6);
+}
+
+/* --- Dark Scratched Oak Desk Surface --- */
+.texture-dark-oak {
+  background-color: #120d09;
+  background-image:
+    radial-gradient(circle at 48% 35%, rgba(212, 160, 90, 0.12) 0%, rgba(10, 7, 5, 0.95) 75%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, rgba(0,0,0,0.04) 1px, transparent 1px, transparent 18px),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, transparent 2px, rgba(0,0,0,0.12) 4px);
+}
+
+/* --- 35mm Polaroid Developer Emulsion Border --- */
+.polaroid-frame {
+  background: linear-gradient(175deg, #f2eee3 0%, #ded7c4 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.4),
+    inset 0 -2px 4px rgba(60, 45, 30, 0.2),
+    0 4px 10px rgba(0, 0, 0, 0.5),
+    0 12px 28px rgba(0, 0, 0, 0.6);
+}
+.polaroid-chemical-streak {
+  background: linear-gradient(90deg, transparent 0%, rgba(180, 140, 90, 0.07) 40%, rgba(120, 80, 40, 0.12) 60%, transparent 100%);
+  mix-blend-mode: multiply;
+}
+
+/* --- Photographic Metallic Paperclip Shader --- */
+.paperclip-metallic {
+  background: linear-gradient(135deg, #9ca3af 0%, #f3f4f6 25%, #4b5563 50%, #e5e7eb 75%, #1f2937 100%);
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 0.65)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* --- Brushed Steel Tape Recorder Surface --- */
+.texture-brushed-steel {
+  background: repeating-linear-gradient(
+    90deg,
+    #23272d 0px,
+    #2c323a 2px,
+    #1d2126 4px,
+    #333942 6px
+  );
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.2),
+    inset -1px -1px 3px rgba(0, 0, 0, 0.8),
+    0 10px 25px rgba(0, 0, 0, 0.85);
+}
+
+/* --- Rubber Stamp Organic Ink Edge Pooling Filter --- */
+.stamp-ink-border {
+  border-color: #8a1313;
+  box-shadow: 
+    inset 0 0 0 2px rgba(138, 19, 19, 0.8),
+    inset 0 0 8px rgba(80, 0, 0, 0.6);
+  filter: drop-shadow(0 0 0.75px rgba(120, 10, 10, 0.9));
+  mask-image: radial-gradient(circle, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.98) 95%);
+}
+
+/* --- Oxidized Blood Spatter Wet Layer --- */
+.blood-oxidized-layer {
+  mix-blend-mode: multiply;
+  filter: contrast(1.35) brightness(0.85) drop-shadow(0 1px 1px rgba(20, 0, 0, 0.7));
+}
+
+.blood-gloss-specular {
+  mix-blend-mode: screen;
+  opacity: 0.35;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 200, 200, 0.1) 40%, transparent 70%);
 }
