@@ -1,70 +1,60 @@
 # 🩸 VERITAS MORTIS
 
-> *A cinematic, forensic-thriller interactive web experience.*
+> *A procedurally generated, 1970s neo-noir psychological detective thriller.*
 
-**Veritas Mortis** is a highly experimental, front-end web application designed to blur the lines between a traditional website and a cinematic video game. Built with Next.js 15, Framer Motion, and HTML5 Canvas, it drops the user directly into a macabre detective's desk, complete with interactive dossiers, crime scene evidence, and procedural blood physics.
+**Veritas Mortis** ("The Truth of Death") is a deterministic crime thriller engine and forensic investigation workspace built with Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion, and Web Audio API. Inspired by Agatha Christie and David Fincher, it puts players in the shoes of a lead investigator unravelling airtight homicide cases through micro-forensics, dynamic alibi destructions, and high-pressure interrogations.
 
 ---
 
-## 🗄️ Core Features & Architecture
+## 🗄️ Core Engine & Gameplay Systems
 
-### 1. 🎥 Cinematic Sequencing (Framer Motion)
-The application relies heavily on orchestrated animation states rather than standard page routing. 
-- **Glass Shatter & Vault Sequences:** Complex staggered animations that serve as dynamic entryways into the application.
-- **The Detective's Desk:** A 3D-perspective, parallax-driven main menu where users interact with physical folders, polaroids, and case files.
-- **Dossier Layouts:** Interactive case files built with vintage, typewriter-style typography (IBM Plex Mono/Special Elite) and parchment textures.
+### 1. 🔍 3-Act Procedural Thriller Engine (`proceduralGenerator.ts`)
+- **Deterministic Seeded PRNG**: Every case is uniquely reproducible by its numeric seed (e.g. `#VM-104820`) via a Mulberry32 algorithm.
+- **Act 1 (The Hook)**: Initial crime scene discovery where circumstantial evidence points directly toward a framed red herring suspect.
+- **Act 2 (The Reversal)**: Autopsy toxicology chromatography, wiretapped telephony transcripts, and timestamp logs shatter the initial theory and exonerate the red herring.
+- **Act 3 (The Climax)**: Forensic UV blacklight inspection and chemical/ballistic smoking-gun proof corner the true culprit into an unvarnished confession.
 
-### 2. 🩸 Procedural Blood Physics (HTML5 Canvas)
-To achieve a visceral, "macabre realism" aesthetic without relying on massive static video files, the project implements custom Canvas graphics:
-- **Dynamic Dripping:** When the gunshot trigger occurs, an array of physics-based fluid particles spawns and drips down the screen in real-time.
-- **Speckled Stains:** Organic splatter patterns are procedurally calculated based on heavy Gaussian density math, ensuring no two bloodstains look exactly identical.
+### 2. 📋 Micro-Forensics Suite & Evidence Board
+- **Autopsy Sheets**: Primary injuries, gastric contents, defensive wound analysis, and narrow estimated time-of-death windows.
+- **Toxicology Chromatography**: Serum anomaly reports, metabolic decomposition rates, and fatal compound detection.
+- **UV 365nm Blacklight Inspection**: Reveal hidden luminescent fingerprints, wiped blood halos, and chemical markers invisible under normal lighting.
+- **Deductive Yarn Matrix**: Drag crimson thread connections between clue pushpins and suspect cards to construct airtight indictments.
 
-### 3. ⚙️ Hardware-Accelerated SVG Rendering
-To solve a notorious Chromium sub-pixel rendering bug (where dark red text anti-aliases into bright pink against light backgrounds), this project uses ultimate GPU overrides:
-- **`feColorMatrix` Crushing:** A custom inline SVG filter completely strips green and blue color channels during rasterization, guaranteeing a pure, oxidized crimson (`#4A0000`).
-- **GPU Isolation:** Text layers are explicitly isolated onto their own M1 rendering layers using `transform: translateZ(0)` and `isolation: isolate` to prevent background texture alpha-blending.
+### 3. ⚖️ Suspect Psychology & Composure Breakdown (`/api/interrogate`)
+- 4 Composure Tiers: `CALM` $\to$ `DEFLECTING` $\to$ `CORNERED` $\to$ `BROKEN`.
+- Dynamic stress tracking (0–100) mapped to atmospheric body language cues and dramatic confession sequences.
 
-### 4. 🎧 Web Audio API Engine
-A lightweight, custom audio engine manages the atmosphere without relying on heavy external libraries.
-- **Ambient Drone:** A 48Hz and 52Hz detuned sine oscillator setup that generates a subtle, throbbing binaural tension loop in the background.
-- **Triggered SFX:** Gunshots, folder slaps, page turns, and fluid splatters perfectly synchronized to the Framer Motion timelines.
+### 4. 🕵️‍♂️ Diegetic Detective Onboarding HUD (`InvestigationDialogueGuide.tsx`)
+- Vintage 1970s Homicide Precinct case dispatch memorandum box.
+- Monospace typewriter animation with synthesized mechanical keystroke clicks (`forensicAudio.playTypewriterKey()`) and radio-static chimes.
+- **Action-Gated Progression**: Strictly waits for player interactions (inspecting evidence $\to$ linking threads $\to$ interrogating suspects) before auto-advancing.
+- Persistent `[ OBJECTIVE: ... ]` tracker updating across Acts 1, 2, and 3.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Framework:** [Next.js 15](https://nextjs.org/) (App Router)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **Framework:** [Next.js 16](https://nextjs.org/) (App Router, Turbopack) & React 19
+- **State Management:** [Zustand](https://zustand.docs.pmnd.rs/)
+- **Styling:** [Tailwind CSS 4](https://tailwindcss.com/)
 - **Animation:** [Framer Motion](https://www.framer.com/motion/)
-- **Graphics:** HTML5 `<canvas>`, Inline SVG Filters (`feTurbulence`, `feColorMatrix`)
-- **Package Manager:** `pnpm`
+- **Audio Engine:** Web Audio API (`forensicAudio.ts`) & [Howler.js](https://howlerjs.com/)
+- **AI Integration:** Claude 3.5 Sonnet / Vercel AI SDK (with deterministic procedural engine fallback)
 
 ---
 
 ## 🚀 Getting Started
 
-First, install the dependencies using `pnpm`:
-
 ```bash
+# 1. Install dependencies
 pnpm install
-```
 
-Then, run the development server:
-
-```bash
+# 2. Start the local development server
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to begin the investigation.
 
 ---
 
-## 📁 Project Structure
-
-- `/src/app` - Next.js 15 App Router entry points and global CSS.
-- `/src/components/ui` - The core cinematic UI components (`CaseFileOpeningSequence`, `DistressedBloodStamp`, `InteractiveDossierMenu`, etc.)
-- `/public` - Static assets, crime scene textures, mugshots, and SVG icons.
-
----
-
-*“Who is pulling the strings?”*
+*“The truth does not fear the light. It fears only the investigator who looks.”*
