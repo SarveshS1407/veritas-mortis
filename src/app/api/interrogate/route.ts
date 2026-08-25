@@ -1,123 +1,121 @@
-import { generateText } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
-import type { CaseData } from '@/types/case';
+import { NextRequest, NextResponse } from "next/server";
+import type { ComposureLevel, InterrogationResult } from "@/types/caseEngine";
 
-interface InterrogateRequest {
-  suspectId: string;
-  playerAction: string;
-  evidenceId?: string;
-  currentComposure: number;
-  composureLevel: string;
+function calculateComposureLevel(stress: number): ComposureLevel {
+  if (stress < 30) return "CALM";
+  if (stress < 60) return "DEFLECTING";
+  if (stress < 85) return "CORNERED";
+  return "BROKEN";
 }
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body: InterrogateRequest = await request.json();
-    const { suspectId, playerAction, evidenceId, currentComposure, composureLevel } = body;
+    const body = await req.json();
+    const {
+      suspectId,
+      playerAction,
+      evidenceId,
+      presentedEvidenceId,
+      currentStressLevel = 20,
+      currentComposure = 100,
+      contradictionClueId,
+      contradictionEvidenceId,
+      isGuilty = false,
+      dialogueByComposure,
+    } = body;
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!suspectId) {
+      return NextResponse.json({ error: "suspectId is required" }, { status: 400 });
+    }
 
-    // We don't have full suspect details here in the deterministic fallback since they aren't passed, 
-    // but we can assume some contradiction logic based on if evidenceId is present.
-    // In a real scenario, we'd fetch the suspect data from a database to check contradictionEvidenceId.
-    // For this implementation, we'll simulate the deterministic engine.
+    const effectiveEvidenceId = presentedEvidenceId || evidenceId;
+    const targetContradictionId = contradictionClueId || contradictionEvidenceId;
 
-    if (apiKey) {
-      try {
-        const { text } = await generateText({
-          model: anthropic('claude-3-5-sonnet-20240620'),
-          prompt: `You are generating a response for a suspect interrogation in a forensic noir detective game.
-Current Composure: ${currentComposure} (${composureLevel})
-Player Action: "${playerAction}"
-Evidence Presented ID: ${evidenceId || 'None'}
+    let stressDelta = 10;
+    let isContradiction = false;
+    let isConfession = false;
+    let responseText = "I have already stated my account of the evening, Detective.";
+    let bodyLanguage = "*[Maintains an impassive expression across the interrogation table]*";
 
-Determine the suspect's response, the change in composure (composureDelta), the new composure level, their body language, and whether they confess.
-Return ONLY a JSON object with this structure:
-{
-  "response": "Suspect's spoken dialogue",
-  "composureDelta": number (negative for losing composure),
-  "bodyLanguageCue": "Description of physical reaction",
-  "isConfession": boolean
-}
-Ensure the tone is dark, gritty, and menacing.`,
-        });
+    // 1. Evaluate Player Action & Contradiction Presentation
+    if (playerAction === "present_evidence" && effectiveEvidenceId) {
+      if (targetContradictionId && effectiveEvidenceId === targetContradictionId) {
+        // Alibi / Narrative Shattered!
+        isContradiction = true;
+        stressDelta = 35;
+      } else {
+        // Irrelevant or premature evidence presented
+        stressDelta = 3;
+      }
+    } else if (playerAction === "press_harder") {
+      stressDelta = 15;
+    } else {
+      // General question
+      stressDelta = 8;
+    }
 
-        const aiResult = JSON.parse(text);
-        const newComposure = Math.max(0, currentComposure + aiResult.composureDelta);
-        let newComposureLevel = 'CALM';
-        if (newComposure <= 15) newComposureLevel = 'BROKEN';
-        else if (newComposure <= 40) newComposureLevel = 'CORNERED';
-        else if (newComposure <= 70) newComposureLevel = 'DEFLECTING';
+    // Support both stress-based (0-100) and legacy composure-based (100-0) systems
+    let newStress = Math.min(100, Math.max(0, currentStressLevel + stressDelta));
+    if (currentComposure !== undefined && currentStressLevel === 20) {
+      // Invert if called with classic composure
+      const newComposureScore = Math.max(0, Math.min(100, currentComposure - stressDelta));
+      newStress = 100 - newComposureScore;
+    }
 
-        // Enforce confession rules
-        const isConfession = aiResult.isConfession || (newComposure <= 5 && !!evidenceId);
+    const newTier = calculateComposureLevel(newStress);
 
-        return Response.json({
-          response: aiResult.response,
-          composureDelta: aiResult.composureDelta,
-          newComposure,
-          newComposureLevel,
-          bodyLanguageCue: aiResult.bodyLanguageCue,
-          isConfession
-        });
-      } catch (aiError) {
-        console.error('AI Interrogation failed, falling back to deterministic:', aiError);
-        // Fall through to deterministic
+    // 2. Select Dynamic Dialogue & Confessions
+    if (isContradiction) {
+      if (newStress >= 80) {
+        isConfession = true;
+        responseText = isGuilty
+          ? "Enough! You want the truth?! Arthur was going to destroy everything I built! I poisoned the port, and I don't regret a single drop!"
+          : "Alright, stop! I was there at the estate, yes! We screamed at each other over the debts, but he was alive when I hailed my cab at 22:15! I swear to God!";
+        bodyLanguage = "*[Breaks down trembling; hands slam against the metal table under the harsh lamp]*";
+      } else {
+        responseText = "W-where did you get that document?! That doesn't prove anything! Someone planted that to frame me!";
+        bodyLanguage = "*[Pupils dilate sharply; grips the chair armrests with whitening knuckles]*";
+      }
+    } else if (dialogueByComposure && dialogueByComposure[newTier]) {
+      const lines = dialogueByComposure[newTier];
+      if (Array.isArray(lines) && lines.length > 0) {
+        responseText = lines[Math.floor(Math.random() * lines.length)];
       }
     }
 
-    // Deterministic response engine
-    let composureDelta = 0;
-    let response = "";
-    let bodyLanguageCue = "";
-
-    // Simulating contradiction match for deterministic engine
-    // In a full implementation, you would check: evidenceId === suspect.contradictionEvidenceId
-    const isContradiction = !!evidenceId; // Simplified for the prompt requirements
-
-    if (isContradiction) {
-      composureDelta = -Math.floor(Math.random() * 11) - 25; // -25 to -35
-      response = "Where did you get that? That doesn't prove anything!";
-      bodyLanguageCue = "Eyes widen, breath hitches, sudden defensive posture.";
-    } else {
-      composureDelta = -Math.floor(Math.random() * 8) - 5; // -5 to -12
-      response = "I don't know what you're talking about.";
-      bodyLanguageCue = "Shifts uncomfortably, avoids direct eye contact.";
+    // Default psychological body language cues per composure tier
+    if (!isContradiction) {
+      switch (newTier) {
+        case "CALM":
+          bodyLanguage = "*[Leans back comfortably; exhales cigarette smoke in a steady stream]*";
+          break;
+        case "DEFLECTING":
+          bodyLanguage = "*[Avoids direct eye contact; checks wristwatch with restless fingers]*";
+          break;
+        case "CORNERED":
+          bodyLanguage = "*[Breathing accelerates rapidly; noticeable micro-tremors in left hand]*";
+          break;
+        case "BROKEN":
+          bodyLanguage = "*[Head buried in trembling hands; voice cracking under interrogation light]*";
+          break;
+      }
     }
 
-    const newComposure = Math.max(0, currentComposure + Math.round(composureDelta));
-    
-    let newComposureLevel = 'CALM';
-    if (newComposure <= 15) {
-      newComposureLevel = 'BROKEN';
-      bodyLanguageCue = "Trembling uncontrollably, defeated slump, tears welling.";
-    } else if (newComposure <= 40) {
-      newComposureLevel = 'CORNERED';
-      bodyLanguageCue = "Pacing, aggressive gestures, sweat on brow.";
-    } else if (newComposure <= 70) {
-      newComposureLevel = 'DEFLECTING';
-      bodyLanguageCue = "Crossed arms, nervous tapping, tight-lipped expression.";
-    } else {
-      bodyLanguageCue = "Relaxed posture, steady gaze, confident demeanor.";
-    }
+    const result: InterrogationResult = {
+      responseDialogue: responseText,
+      response: responseText,
+      stressDelta,
+      newStressLevel: newStress,
+      newComposure: newTier,
+      newComposureLevel: newTier,
+      bodyLanguageCue: bodyLanguage,
+      isConfession,
+      contradictionTriggered: isContradiction,
+    };
 
-    const isConfession = newComposure <= 5 && !!evidenceId;
-    if (isConfession) {
-      response = "Alright! I did it... I didn't have a choice.";
-      bodyLanguageCue = "Collapses into chair, buries face in hands.";
-    }
-
-    return Response.json({
-      response,
-      composureDelta: Math.round(composureDelta),
-      newComposure,
-      newComposureLevel,
-      bodyLanguageCue,
-      isConfession
-    });
-
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error('Error in interrogate route:', error);
-    return Response.json({ error: 'Failed to process interrogation' }, { status: 500 });
+    console.error("[interrogate route error]:", error);
+    return NextResponse.json({ error: "Failed to process interrogation" }, { status: 500 });
   }
 }

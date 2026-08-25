@@ -155,6 +155,9 @@ class ForensicAudioManager {
     filter.Q.setValueAtTime(1.2, this.ctx.currentTime);
 
     const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(this.ctx.destination);
@@ -215,6 +218,64 @@ class ForensicAudioManager {
     osc.stop(this.ctx.currentTime + 0.14);
 
     this.playFrictionNoise(0.08, 900, 0.2);
+  }
+
+  /* ── 10. Typewriter Mechanical Keystroke Click & Slap ── */
+  public playTypewriterKey() {
+    this.initContext();
+    if (!this.ctx) return;
+
+    // Metallic strike click
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "triangle";
+    const baseFreq = 700 + Math.random() * 350;
+    osc.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.035);
+
+    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.04);
+
+    // Friction rattle
+    this.playFrictionNoise(0.025, 4200 + Math.random() * 800, 0.08);
+  }
+
+  /* ── 11. Objective / Radio-Static Chime ── */
+  public playRadioChime() {
+    this.initContext();
+    if (!this.ctx) return;
+
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc1.type = "sine";
+    osc2.type = "sine";
+
+    osc1.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
+    osc1.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.25); // A5
+
+    osc2.frequency.setValueAtTime(440, this.ctx.currentTime); // A4
+    osc2.frequency.exponentialRampToValueAtTime(659.25, this.ctx.currentTime + 0.25); // E5
+
+    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.45);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc1.start();
+    osc2.start();
+    osc1.stop(this.ctx.currentTime + 0.45);
+    osc2.stop(this.ctx.currentTime + 0.45);
+
+    this.playFrictionNoise(0.08, 1200, 0.06);
   }
 }
 

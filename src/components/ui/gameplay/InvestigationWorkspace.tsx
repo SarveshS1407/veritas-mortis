@@ -6,6 +6,7 @@ import EvidenceBoard from "./EvidenceBoard";
 import InterrogationConduit from "./InterrogationConduit";
 import CaseProgressionDock from "./CaseProgressionDock";
 import AccusationModal from "./AccusationModal";
+import InvestigationDialogueGuide from "./InvestigationDialogueGuide";
 
 interface InvestigationWorkspaceProps {
   onBackToMenu?: () => void;
@@ -137,6 +138,9 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
       <div className="h-28 w-full relative z-20 flex-shrink-0">
         <CaseProgressionDock />
       </div>
+
+      {/* ── DIEGETIC DETECTIVE ONBOARDING HUD & SUBTITLE GUIDE ── */}
+      <InvestigationDialogueGuide />
 
       {/* ── ACCUSATION MODAL ── */}
       <AccusationModal

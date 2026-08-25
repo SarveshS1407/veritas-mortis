@@ -8,15 +8,22 @@ import {
   Accusation, 
   CaseVerdict, 
   InterrogationEntry,
-  Suspect,
-  ComposureLevel
+  SuspectArchetype,
+  ComposureLevel,
+  EvidenceNode
 } from '@/types/case';
 import { generateCase } from './proceduralGenerator';
 
-const getComposureLevel = (composure: number): ComposureLevel => {
-  if (composure >= 75) return "CALM";
-  if (composure >= 50) return "DEFLECTING";
-  if (composure >= 25) return "CORNERED";
+const getComposureLevel = (stressOrComposure: number, isStress = false): ComposureLevel => {
+  if (isStress) {
+    if (stressOrComposure < 30) return "CALM";
+    if (stressOrComposure < 60) return "DEFLECTING";
+    if (stressOrComposure < 85) return "CORNERED";
+    return "BROKEN";
+  }
+  if (stressOrComposure >= 75) return "CALM";
+  if (stressOrComposure >= 50) return "DEFLECTING";
+  if (stressOrComposure >= 25) return "CORNERED";
   return "BROKEN";
 };
 
@@ -41,13 +48,30 @@ export const useCaseStore = create<GameState>((set, get) => ({
   accusation: null,
   verdict: null,
 
+  hasCompletedIntroGuide: false,
+  isGuideOpen: true,
+
   generateNewCase: async (seed?: number) => {
-    set({ isLoading: true, error: null });
+    const resolvedSeed = typeof seed === "number" ? seed : Math.floor(Math.random() * 900000) + 100000;
+    set({
+      isLoading: true,
+      error: null,
+      interrogationLog: [],
+      redStrings: [],
+      activeSuspectId: null,
+      activeEvidenceId: null,
+      boardNodePositions: {},
+      accusation: null,
+      verdict: null,
+      currentAct: "act1_hook",
+      hasCompletedIntroGuide: false,
+      isGuideOpen: true,
+    });
     try {
       const response = await fetch('/api/generate-case', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seed })
+        body: JSON.stringify({ seed: resolvedSeed })
       });
       if (response.ok) {
         const newCase = await response.json();
@@ -55,25 +79,32 @@ export const useCaseStore = create<GameState>((set, get) => ({
       } else {
         throw new Error("API failed");
       }
-    } catch (e) {
-      const localCase = generateCase(seed);
+    } catch {
+      const localCase = generateCase(resolvedSeed);
       set({ currentCase: localCase, currentAct: "act1_hook", isLoading: false });
     }
   },
 
-  setWorkspaceMode: (mode) => set({ workspaceMode: mode }),
-  setActiveSuspect: (id) => set({ activeSuspectId: id }),
-  setActiveEvidence: (id) => set({ activeEvidenceId: id }),
+  setWorkspaceMode: (mode: WorkspaceMode) => set({ workspaceMode: mode }),
+  setActiveSuspect: (id: string | null) => set({ activeSuspectId: id }),
+  setActiveEvidence: (id: string | null) => set({ activeEvidenceId: id }),
 
-  examineEvidence: (id) => set((state) => {
+  examineEvidence: (id: string) => set((state) => {
     if (!state.currentCase) return state;
-    const updatedEvidence = state.currentCase.evidence.map(ev => 
+    const evidenceList = state.currentCase.evidenceNodes || state.currentCase.evidence || [];
+    const updatedEvidence = evidenceList.map((ev: EvidenceNode) => 
       ev.id === id && ev.status !== "analyzed" ? { ...ev, status: 'examined' as const } : ev
     );
-    return { currentCase: { ...state.currentCase, evidence: updatedEvidence } };
+    return {
+      currentCase: {
+        ...state.currentCase,
+        evidenceNodes: updatedEvidence,
+        evidence: updatedEvidence
+      }
+    };
   }),
 
-  addRedString: (from, to, fromType, toType) => set((state) => ({
+  addRedString: (from: string, to: string, fromType?: string, toType?: string) => set((state) => ({
     redStrings: [...state.redStrings, {
       id: `rs_${Date.now()}_${Math.random()}`,
       fromNodeId: from,
@@ -84,43 +115,51 @@ export const useCaseStore = create<GameState>((set, get) => ({
     }]
   })),
 
-  removeRedString: (id) => set((state) => ({
+  removeRedString: (id: string) => set((state) => ({
     redStrings: state.redStrings.filter(rs => rs.id !== id)
   })),
 
-  updateNodePosition: (nodeId, pos) => set((state) => ({
+  updateNodePosition: (nodeId: string, pos: { x: number; y: number }) => set((state) => ({
     boardNodePositions: { ...state.boardNodePositions, [nodeId]: pos }
   })),
 
   setForensicTool: (tool) => set({ activeForensicTool: tool }),
 
-  interrogateSuspect: async (suspectId, action, evidenceId?) => {
+  interrogateSuspect: async (suspectId: string, action: string, evidenceId?: string) => {
     const state = get();
     if (!state.currentCase) return;
     
-    const suspect = state.currentCase.suspects.find(s => s.id === suspectId);
+    const suspect = state.currentCase.suspects.find((s: SuspectArchetype) => s.id === suspectId);
     if (!suspect) return;
 
-    const applyResult = (suspectResponse: string, composureDelta: number, newComposure: number, newComposureLevel: ComposureLevel) => {
+    const applyResult = (
+      suspectResponse: string,
+      stressDelta: number,
+      newStress: number,
+      newComposureLevel: ComposureLevel,
+      bodyLanguageCue?: string
+    ) => {
       const entry: InterrogationEntry = {
         id: `int_${Date.now()}`,
         suspectId,
         playerAction: action,
         suspectResponse,
         evidenceUsed: evidenceId,
-        composureDelta,
+        composureDelta: stressDelta,
+        bodyLanguageCue,
         timestamp: new Date().toISOString()
       };
 
       set((s) => {
         if (!s.currentCase) return s;
-        const updatedSuspects = s.currentCase.suspects.map(sus => {
+        const updatedSuspects = s.currentCase.suspects.map((sus: SuspectArchetype) => {
           if (sus.id === suspectId) {
             return {
               ...sus,
-              composure: newComposure,
+              stressLevel: newStress,
+              composure: newComposureLevel,
               composureLevel: newComposureLevel,
-              interrogationCount: sus.interrogationCount + 1
+              interrogationCount: (sus.interrogationCount ?? 0) + 1
             };
           }
           return sus;
@@ -140,33 +179,41 @@ export const useCaseStore = create<GameState>((set, get) => ({
           suspectId,
           playerAction: action,
           evidenceId,
-          currentComposure: suspect.composure,
-          composureLevel: suspect.composureLevel,
+          currentStressLevel: suspect.stressLevel ?? 20,
+          currentComposure: typeof suspect.composure === "number" ? suspect.composure : 100,
+          contradictionClueId: suspect.contradictionClueId || suspect.contradictionEvidenceId,
+          contradictionEvidenceId: suspect.contradictionClueId || suspect.contradictionEvidenceId,
+          isGuilty: suspect.isGuilty,
+          dialogueByComposure: suspect.dialogueByComposure,
         })
       });
       
       if (response.ok) {
         const data = await response.json();
         applyResult(
-          data.response,
-          data.composureDelta,
-          data.newComposure,
-          data.newComposureLevel as ComposureLevel
+          data.responseDialogue || data.response,
+          data.stressDelta ?? data.composureDelta ?? 10,
+          data.newStressLevel ?? (100 - (data.newComposure ?? 80)),
+          (data.newComposureLevel || data.newComposure || "CALM") as ComposureLevel,
+          data.bodyLanguageCue
         );
       } else {
         throw new Error("API error");
       }
     } catch {
       // Local fallback logic
-      const isContradiction = evidenceId === suspect.contradictionEvidenceId;
-      const delta = isContradiction ? -(25 + Math.floor(Math.random() * 10)) : -(5 + Math.floor(Math.random() * 8));
-      const newComposure = Math.max(0, suspect.composure + delta);
-      const newComposureLevel = getComposureLevel(newComposure);
+      const targetClue = suspect.contradictionClueId || suspect.contradictionEvidenceId;
+      const isContradiction = evidenceId && targetClue && evidenceId === targetClue;
+      const delta = isContradiction ? (30 + Math.floor(Math.random() * 10)) : (8 + Math.floor(Math.random() * 5));
+      const currentStress = suspect.stressLevel ?? 20;
+      const newStress = Math.min(100, currentStress + delta);
+      const newComposureLevel = getComposureLevel(newStress, true);
       
       const responseLines = suspect.dialogueByComposure[newComposureLevel] || [];
       const suspectResponse = responseLines[Math.floor(Math.random() * responseLines.length)] || "...";
+      const bodyLanguageCue = suspect.bodyLanguageCues?.[newComposureLevel] || "*[Remains silent]*";
       
-      applyResult(suspectResponse, delta, newComposure, newComposureLevel);
+      applyResult(suspectResponse, delta, newStress, newComposureLevel, bodyLanguageCue);
     }
   },
 
@@ -176,24 +223,29 @@ export const useCaseStore = create<GameState>((set, get) => ({
     return state;
   }),
 
-  submitAccusation: (accusation) => {
+  submitAccusation: (accusation: Accusation) => {
     const state = get();
     if (!state.currentCase) return;
 
-    const { solution, evidence } = state.currentCase;
+    const solution = state.currentCase.secretTruth || state.currentCase.solution;
+    const evidenceList = state.currentCase.evidenceNodes || state.currentCase.evidence || [];
     let score = 0;
 
-    const correctKiller = accusation.accusedSuspectId === solution.killerId;
-    const correctWeapon = accusation.selectedWeaponEvidenceId === solution.weaponEvidenceId;
-    const correctMotive = accusation.selectedMotiveIndex === solution.motiveIndex;
-    
-    if (correctKiller) score += 40;
-    if (correctMotive) score += 25;
-    if (correctWeapon) score += 20;
+    const targetCulpritId = solution?.culpritId || solution?.killerId;
+    const targetWeaponId = solution?.murderWeaponClueId || solution?.weaponEvidenceId || solution?.murderWeaponEvidenceId;
 
-    const examinedCount = evidence.filter(e => e.status === "examined" || e.status === "analyzed").length;
-    const evidenceExaminedPercent = (examinedCount / evidence.length) * 100;
-    const evidenceScore = (evidenceExaminedPercent / 100) * 15;
+    const correctKiller = Boolean(targetCulpritId && accusation.accusedSuspectId === targetCulpritId);
+    const correctWeapon = Boolean(!targetWeaponId || accusation.selectedWeaponEvidenceId === targetWeaponId);
+    const correctMotive = Boolean(accusation.selectedMotiveIndex === (solution?.motiveIndex ?? 0));
+    
+    if (correctKiller) score += 50;
+    if (correctWeapon) score += 25;
+    if (correctMotive) score += 15;
+
+    const totalEv = evidenceList.length || 8;
+    const examinedCount = evidenceList.filter((e: EvidenceNode) => e.status === "examined" || e.status === "analyzed").length;
+    const evidenceExaminedPercent = Math.round((examinedCount / totalEv) * 100);
+    const evidenceScore = Math.round((evidenceExaminedPercent / 100) * 10);
     
     score += evidenceScore;
 
@@ -202,18 +254,28 @@ export const useCaseStore = create<GameState>((set, get) => ({
     else if (score >= 65) grade = "B";
     else if (score >= 45) grade = "C";
 
+    const narrativeSummary = solution?.fullNarrativeChronicle || solution?.fullNarrative || "Case closed.";
+
     const verdict: CaseVerdict = {
       grade,
+      score,
       correctKiller,
+      isKillerCorrect: correctKiller,
       correctMotive,
+      isMotiveCorrect: correctMotive,
       correctWeapon,
+      isWeaponCorrect: correctWeapon,
       evidenceExaminedPercent,
       interrogationsCompleted: state.interrogationLog.length,
-      narrativeSummary: solution.fullNarrative
+      narrativeSummary,
+      narrativeReveal: narrativeSummary,
     };
 
     set({ accusation, verdict });
   },
+
+  setHasCompletedIntroGuide: (completed: boolean) => set({ hasCompletedIntroGuide: completed }),
+  toggleGuide: () => set((s) => ({ isGuideOpen: !s.isGuideOpen })),
 
   resetGame: () => set({
     currentCase: null,
@@ -228,6 +290,8 @@ export const useCaseStore = create<GameState>((set, get) => ({
     evidenceTrayOrder: [],
     accusation: null,
     verdict: null,
+    hasCompletedIntroGuide: false,
+    isGuideOpen: true,
     isLoading: false,
     error: null
   })
