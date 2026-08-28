@@ -114,12 +114,17 @@ export default function InvestigationDialogueGuide() {
     return currentObjectiveText;
   }, [hasCompletedIntroGuide, currentStepIndex, INTRO_STEPS, currentObjectiveText]);
 
+  const caseIdString = useMemo(() => {
+    if (!currentCase?.caseNumber) return "CASE #VM-512909";
+    return currentCase.caseNumber.startsWith("#") ? `CASE ${currentCase.caseNumber}` : `CASE #${currentCase.caseNumber}`;
+  }, [currentCase]);
+
   const targetSpeaker = useMemo(() => {
     if (!hasCompletedIntroGuide && currentStepIndex < INTRO_STEPS.length) {
       return INTRO_STEPS[currentStepIndex].speaker;
     }
-    return `CASE ${currentCase?.caseNumber || "#VM-1974"} — ACTIVE DIRECTIVE`;
-  }, [hasCompletedIntroGuide, currentStepIndex, INTRO_STEPS, currentCase]);
+    return `${caseIdString} — ACTIVE DIRECTIVE`;
+  }, [hasCompletedIntroGuide, currentStepIndex, INTRO_STEPS, caseIdString]);
 
   const targetDocketTag = useMemo(() => {
     if (!hasCompletedIntroGuide && currentStepIndex < INTRO_STEPS.length) {
@@ -268,12 +273,13 @@ export default function InvestigationDialogueGuide() {
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
         <button
           onClick={toggleGuide}
-          className="flex items-center gap-2.5 px-3.5 py-1.5 bg-[#1F1B17]/95 border border-[#6E5A44]/80 hover:border-[#A88C68] text-[#D8C7B0] hover:text-[#FFF8EE] text-xs font-mono tracking-widest uppercase rounded-sm shadow-[0_6px_20px_rgba(0,0,0,0.85)] transition-all group"
+          onMouseEnter={() => forensicAudio.playPenFriction()}
+          className="flex items-center gap-2.5 px-4 py-2 bg-[#201A15] border border-[#6B5540] hover:border-[#A4825A] text-[#E0D3C1] hover:text-[#FFF8EE] text-xs font-mono tracking-widest uppercase rounded shadow-[0_6px_25px_rgba(0,0,0,0.9)] transition-all group"
           style={{
-            boxShadow: "0 4px 18px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08)",
+            backgroundImage: "radial-gradient(circle at 10% 20%, rgba(68, 52, 38, 0.4), transparent 75%)",
           }}
         >
-          <span className="w-2 h-2 rounded-full bg-[#C89B3C] group-hover:bg-[#E5B558] shadow-[0_0_6px_rgba(200,155,60,0.6)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#C89B3C] shadow-[0_0_8px_rgba(200,155,60,0.7)] group-hover:scale-110 transition-transform" />
           <span>[ ? DETECTIVE MEMO ]</span>
         </button>
       </div>
@@ -281,7 +287,7 @@ export default function InvestigationDialogueGuide() {
   }
 
   return (
-    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-full max-w-3xl px-4 pointer-events-auto select-none">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-3xl px-4 pointer-events-auto select-none">
       <AnimatePresence mode="wait">
         {isMinimized && hasCompletedIntroGuide ? (
           /* ── MINIMIZED WEATHERED EVIDENCE TAG STRIP ── */
@@ -291,26 +297,44 @@ export default function InvestigationDialogueGuide() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.97 }}
             transition={{ duration: 0.22 }}
-            className="flex items-center justify-between gap-4 px-4 py-2 bg-[#1A1613]/95 border border-[#5C4A38] rounded-sm shadow-[0_10px_30px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.06)]"
+            className="relative flex items-center justify-between gap-4 px-4 py-2.5 bg-[#201A15] border border-[#5A4533] rounded-sm shadow-[0_12px_35px_rgba(0,0,0,0.95)] overflow-hidden"
             style={{
-              backgroundImage: "radial-gradient(ellipse at top left, rgba(74, 59, 46, 0.2), transparent 70%)",
+              backgroundImage: "radial-gradient(circle at 15% 30%, rgba(55, 42, 30, 0.5) 0%, rgba(20, 16, 12, 0.98) 100%)",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 15px rgba(0, 0, 0, 0.6)",
             }}
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#C89B3C] shadow-[0_0_5px_rgba(200,155,60,0.5)]" />
+            {/* Top paperclip fastener */}
+            <div className="absolute -top-1 left-6 z-20 pointer-events-none">
+              <svg width="18" height="24" viewBox="0 0 18 24" fill="none">
+                <path d="M4 22V5C4 2.79086 5.79086 1 8 1C10.2091 1 12 2.79086 12 5V18C12 19.6569 10.6569 21 9 21C7.34315 21 6 19.6569 6 18V6" stroke="url(#clipGradMin)" strokeWidth="1.8" strokeLinecap="round" />
+                <defs>
+                  <linearGradient id="clipGradMin" x1="4" y1="1" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#D6C7B2" />
+                    <stop offset="0.5" stopColor="#8C7965" />
+                    <stop offset="1" stopColor="#4A3D30" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
+            <div className="flex items-center gap-3 min-w-0 pl-7">
+              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#C89B3C] shadow-[0_0_6px_rgba(200,155,60,0.6)]" />
               <span className="text-[10px] font-mono tracking-[0.2em] text-[#C4A076] font-bold uppercase flex-shrink-0">
-                DIRECTIVE:
+                ACTIVE DIRECTIVE:
               </span>
-              <p className="text-xs font-mono text-[#E8E1D5] truncate tracking-wide">
+              <p className="text-xs font-mono text-[#EAE2D5] truncate tracking-wide font-normal">
                 {displayedText}
                 {isTyping && <span className="inline-block w-1.5 h-3 bg-[#C89B3C] ml-1 animate-pulse" />}
               </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 z-10">
               <button
-                onClick={() => setIsMinimized(false)}
-                className="px-2.5 py-0.5 text-[10px] font-mono text-[#C4B299] hover:text-[#FFF5EA] border border-[#544333] hover:border-[#8C7156] rounded-sm bg-[#120F0D]/60 transition-colors uppercase tracking-wider"
+                onClick={() => {
+                  forensicAudio.playPenFriction();
+                  setIsMinimized(false);
+                }}
+                className="px-2.5 py-0.5 text-[10px] font-mono text-[#C4B299] hover:text-[#FFF5EA] border border-[#544333] hover:border-[#967757] rounded-sm bg-[#16120E]/80 transition-colors uppercase tracking-wider shadow-sm"
               >
                 [ EXPAND ]
               </button>
@@ -324,89 +348,180 @@ export default function InvestigationDialogueGuide() {
             </div>
           </motion.div>
         ) : (
-          /* ── EXPANDED VINTAGE DETECTIVE CASE MEMORANDUM ── */
+          /* ── EXPANDED TACTILE AGED BLOOD-STAINED EVIDENCE MEMO CARD ── */
           <motion.div
             key="expanded"
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.96 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="relative p-4 md:p-5 bg-[#1C1814]/98 border border-[#5C4A38] rounded-sm text-[#E8DFC8] font-mono shadow-[0_15px_45px_rgba(0,0,0,0.95)]"
+            className="relative p-5 md:p-6 bg-[#211B15] text-[#E8DFC8] font-mono rounded-sm shadow-[0_20px_50px_rgba(0,0,0,0.95)] overflow-hidden"
             style={{
-              boxShadow: "0 12px 40px rgba(0, 0, 0, 0.95), inset 0 0 35px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(230, 215, 190, 0.08)",
-              border: "1px solid #4D3D2F",
-              backgroundImage: "radial-gradient(circle at 10% 10%, rgba(60, 48, 38, 0.35) 0%, rgba(20, 16, 13, 0.98) 90%)",
+              border: "1px solid #544230",
+              boxShadow: "0 16px 45px rgba(0, 0, 0, 0.95), inset 0 0 35px rgba(10, 8, 6, 0.85), inset 0 1px 0 rgba(235, 215, 185, 0.1)",
+              backgroundImage: "radial-gradient(circle at 20% 15%, rgba(65, 50, 36, 0.35) 0%, rgba(20, 15, 12, 0.98) 100%)",
             }}
           >
-            {/* Top Header Memo Docket */}
-            <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-[#3E3226] text-[11px]">
-              <div className="flex items-center gap-2.5">
-                <span className="px-1.5 py-0.5 bg-[#2B231C] border border-[#544333] text-[#C89B3C] font-bold text-[9px] tracking-widest uppercase rounded-sm">
-                  {targetDocketTag}
+            {/* ── 1. FIBROUS PAPER GRAIN OVERLAY ── */}
+            <div className="pointer-events-none absolute inset-0 opacity-[0.14] mix-blend-overlay z-0">
+              <svg viewBox="0 0 200 200" preserveAspectRatio="none" className="w-full h-full">
+                <filter id="memo-grain">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />
+                  <feColorMatrix type="saturate" values="0" />
+                </filter>
+                <rect width="100%" height="100%" filter="url(#memo-grain)" />
+              </svg>
+            </div>
+
+            {/* ── 2. REALISTIC DRIED BLOOD STAINS & RESIDUE ── */}
+            {/* Top-Right Arterial Spatter & Clot Seepage */}
+            <div className="pointer-events-none absolute -top-4 -right-4 w-44 h-44 z-0 opacity-85">
+              <svg viewBox="0 0 160 160" className="w-full h-full">
+                <radialGradient id="bloodClotTop" cx="80%" cy="20%" r="70%">
+                  <stop offset="0%" stopColor="#2E0202" stopOpacity="0.95" />
+                  <stop offset="35%" stopColor="#4A0808" stopOpacity="0.75" />
+                  <stop offset="70%" stopColor="#240202" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="#140202" stopOpacity="0" />
+                </radialGradient>
+                <path d="M160,0 L80,0 C95,25 110,35 105,55 C100,72 135,70 145,95 C152,110 160,115 160,120 Z" fill="url(#bloodClotTop)" />
+                {/* Fine Spatter Droplets */}
+                <circle cx="95" cy="45" r="3.5" fill="#3D0505" opacity="0.9" />
+                <circle cx="82" cy="32" r="2.2" fill="#4A0808" opacity="0.85" />
+                <circle cx="70" cy="18" r="1.8" fill="#330202" opacity="0.8" />
+                <circle cx="115" cy="78" r="3" fill="#2E0202" opacity="0.85" />
+                <circle cx="128" cy="92" r="2" fill="#440505" opacity="0.75" />
+                <circle cx="76" cy="52" r="1.4" fill="#3D0505" opacity="0.7" />
+              </svg>
+            </div>
+
+            {/* Bottom-Left Clotted Seepage & Finger Smudge */}
+            <div className="pointer-events-none absolute -bottom-6 -left-6 w-52 h-48 z-0 opacity-80">
+              <svg viewBox="0 0 180 160" className="w-full h-full">
+                <radialGradient id="bloodClotBottom" cx="20%" cy="80%" r="75%">
+                  <stop offset="0%" stopColor="#280202" stopOpacity="0.95" />
+                  <stop offset="40%" stopColor="#440808" stopOpacity="0.7" />
+                  <stop offset="75%" stopColor="#220202" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#100202" stopOpacity="0" />
+                </radialGradient>
+                <path d="M0,80 C25,75 35,90 55,95 C72,100 85,130 95,160 L0,160 Z" fill="url(#bloodClotBottom)" />
+                {/* Oxidized bloody thumbprint ridges */}
+                <g opacity="0.45" stroke="#3A0808" strokeWidth="0.8" fill="none">
+                  <path d="M30,115 C34,108 44,108 48,115 C52,122 48,132 40,135" />
+                  <path d="M26,118 C32,104 48,104 54,118 C58,128 50,138 38,140" />
+                  <path d="M22,122 C30,100 52,100 60,122 C64,134 54,144 36,145" />
+                  <path d="M18,128 C28,96 56,96 66,128" />
+                </g>
+                {/* Spatter Satellites */}
+                <circle cx="68" cy="85" r="2.5" fill="#3D0505" opacity="0.85" />
+                <circle cx="82" cy="105" r="3" fill="#2E0202" opacity="0.8" />
+                <circle cx="98" cy="132" r="2" fill="#4A0808" opacity="0.75" />
+                <circle cx="52" cy="74" r="1.6" fill="#380505" opacity="0.7" />
+              </svg>
+            </div>
+
+            {/* ── 3. DEBOSSED POLICE RUBBER STAMP IN BACKGROUND ── */}
+            <div className="pointer-events-none absolute right-8 bottom-3 select-none z-0 opacity-15 rotate-[-7deg]">
+              <div className="border-2 border-[#8C3A3A] px-3.5 py-1 text-[#8C3A3A] text-center font-bold tracking-[0.25em] text-[10px] uppercase rounded-sm">
+                <div>PRECINCT 42 HOMICIDE</div>
+                <div className="text-[8px] tracking-[0.35em] mt-0.5">FORENSIC DISPATCH UNIT</div>
+              </div>
+            </div>
+
+            {/* ── 4. METALLIC PAPERCLIP FASTENER (TOP LEFT) ── */}
+            <div className="absolute -top-1.5 left-8 z-20 pointer-events-none">
+              <svg width="22" height="32" viewBox="0 0 22 32" fill="none">
+                {/* Drop shadow */}
+                <path d="M5 30V6C5 3.23858 7.23858 1 10 1C12.7614 1 15 3.23858 15 6V24C15 25.6569 13.6569 27 12 27C10.3431 27 9 25.6569 9 24V8" stroke="rgba(0,0,0,0.6)" strokeWidth="2.4" strokeLinecap="round" transform="translate(1, 1)" />
+                {/* Metallic Clip */}
+                <path d="M5 30V6C5 3.23858 7.23858 1 10 1C12.7614 1 15 3.23858 15 6V24C15 25.6569 13.6569 27 12 27C10.3431 27 9 25.6569 9 24V8" stroke="url(#metallicClipGrad)" strokeWidth="2.2" strokeLinecap="round" />
+                <defs>
+                  <linearGradient id="metallicClipGrad" x1="5" y1="1" x2="15" y2="30" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#E6D8C4" />
+                    <stop offset="0.3" stopColor="#B39E84" />
+                    <stop offset="0.6" stopColor="#6E5A44" />
+                    <stop offset="0.85" stopColor="#C4B097" />
+                    <stop offset="1" stopColor="#544332" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
+            {/* ── 5. TOP HEADER DOCKET & BADGE ── */}
+            <div className="relative z-10 flex items-center justify-between gap-2 pb-3 mb-3 border-b border-[#443527]/90 text-[11px]">
+              <div className="flex items-center gap-3 pl-6">
+                <span className="px-2 py-0.5 bg-[#2A2119] border border-[#6E543A] text-[#D8A852] font-bold text-[9.5px] tracking-[0.2em] uppercase rounded-sm shadow-sm">
+                  [ {targetDocketTag} ]
                 </span>
-                <span className="font-bold tracking-[0.16em] text-[#D8C7B0] uppercase text-[10.5px]">
+                <span className="font-bold tracking-[0.18em] text-[#E0D0B8] uppercase text-[11px]">
                   {targetSpeaker}
                 </span>
               </div>
 
               {/* Step indicator during intro */}
               {!hasCompletedIntroGuide && (
-                <div className="flex items-center gap-1.5 text-[#A89074] text-[10px] tracking-widest font-mono">
-                  <span className="px-1.5 py-0.5 bg-[#14100D] border border-[#3E3226] rounded-sm text-[#C4A076]">
+                <div className="flex items-center gap-1.5 text-[#B89E7E] text-[10px] tracking-widest font-mono">
+                  <span className="px-2 py-0.5 bg-[#17120E] border border-[#4D3A28] rounded-sm text-[#D4B07B] font-semibold">
                     STEP {currentStepIndex + 1} OF {INTRO_STEPS.length}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Typewriter Subtitle Text */}
-            <div className="min-h-[50px] flex items-start py-0.5">
-              <p className="text-sm md:text-[14.5px] leading-relaxed text-[#EDE5D8] tracking-wide font-normal">
+            {/* ── 6. TYPEWRITER SUBTITLE DIRECTIVE TEXT ── */}
+            <div className="relative z-10 min-h-[52px] flex items-start py-0.5 pl-1">
+              <p className="text-sm md:text-[15px] leading-relaxed text-[#F2EAE0] tracking-wide font-normal font-mono" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}>
                 {displayedText}
                 {isTyping && (
-                  <span className="inline-block w-2 h-3.5 bg-[#C89B3C] ml-1.5 animate-[pulse_0.75s_infinite] align-middle" />
+                  <span className="inline-block w-2 h-3.5 bg-[#D8A852] ml-1.5 animate-[pulse_0.75s_infinite] align-middle shadow-[0_0_6px_rgba(216,168,82,0.6)]" />
                 )}
               </p>
             </div>
 
-            {/* Action Gate Prompt Banner (Stamped Case Directive) */}
+            {/* ── 7. ACTION GATE PROMPT BANNER (STAMPED DIRECTIVE) ── */}
             {!hasCompletedIntroGuide && (
-              <div className="mt-2.5 p-2 bg-[#120E0C]/90 border border-dashed border-[#5C4A38] rounded-sm flex items-center justify-between gap-3 text-[11px] text-[#D8C5AB]">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#C89B3C] flex-shrink-0" />
-                  <span className="tracking-wide uppercase font-semibold text-[#D4B692] truncate">
+              <div className="relative z-10 mt-3 p-2.5 bg-[#16110D]/90 border border-dashed border-[#6B523A] rounded-sm flex items-center justify-between gap-3 text-[11px] text-[#DECBB5]">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-[#D8A852] flex-shrink-0 shadow-[0_0_5px_rgba(216,168,82,0.8)]" />
+                  <span className="tracking-wider uppercase font-semibold text-[#DFC096] truncate">
                     {currentActionHint}
                   </span>
                 </div>
                 {currentStepIndex > 0 && (
-                  <span className="text-[9.5px] text-[#7D6B58] uppercase tracking-widest flex-shrink-0">
+                  <span className="text-[9.5px] text-[#8C765C] uppercase tracking-widest flex-shrink-0">
                     [ AUTO-ADVANCES ]
                   </span>
                 )}
               </div>
             )}
 
-            {/* Bottom Controls Bar */}
-            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[#362B20] text-[10px] text-[#9E8B75]">
+            {/* ── 8. BOTTOM CONTROLS & TACTILE COMMAND TABS ── */}
+            <div className="relative z-10 flex items-center justify-between mt-3.5 pt-3 border-t border-[#443527]/90 text-[10.5px] text-[#A8947C]">
               <div className="flex items-center gap-3">
                 <button
-                  onClick={advanceStep}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-[#282019] hover:bg-[#382E25] border border-[#5C4A38] hover:border-[#8C7156] text-[#E8DFC8] hover:text-[#FFF] rounded-sm transition-colors uppercase tracking-wider shadow-sm"
+                  onClick={() => {
+                    forensicAudio.playPenFriction();
+                    advanceStep();
+                  }}
+                  onMouseEnter={() => forensicAudio.playPenFriction()}
+                  className="flex items-center gap-2 px-3.5 py-1.5 bg-[#2B2118] hover:bg-[#3D2F23] border border-[#6B543D] hover:border-[#A4825C] text-[#EFE7DC] hover:text-[#FFF] rounded-sm transition-all uppercase tracking-wider shadow-[0_2px_8px_rgba(0,0,0,0.6)] group"
                 >
-                  <span>
+                  <span className="font-semibold">
                     {isTyping
                       ? "REVEAL ALL"
                       : currentStepIndex === 0
                       ? "ACKNOWLEDGE MEMO"
                       : "MANUAL PROCEED [ SPACE ]"}
                   </span>
-                  <kbd className="px-1 py-0.2 bg-[#120E0C] border border-[#3E3226] rounded-sm text-[9px] text-[#C4B299] font-sans">↵</kbd>
+                  <kbd className="px-1.5 py-0.5 bg-[#140F0B] border border-[#4D3A28] rounded-sm text-[9.5px] text-[#D8C2A8] font-sans group-hover:border-[#8C6D4A]">↵</kbd>
                 </button>
 
                 {!hasCompletedIntroGuide && (
                   <button
-                    onClick={handleSkipIntro}
-                    className="text-[#7D6B58] hover:text-[#C4B299] underline underline-offset-4 decoration-[#4D3D2F] transition-colors uppercase tracking-wider"
+                    onClick={() => {
+                      forensicAudio.playPenFriction();
+                      handleSkipIntro();
+                    }}
+                    className="text-[#8C765C] hover:text-[#D8C2A8] underline underline-offset-4 decoration-[#54402E] transition-colors uppercase tracking-wider text-[10px]"
                   >
                     [ ESC ] Skip Intro
                   </button>
@@ -416,15 +531,22 @@ export default function InvestigationDialogueGuide() {
               <div className="flex items-center gap-2">
                 {hasCompletedIntroGuide && (
                   <button
-                    onClick={() => setIsMinimized(true)}
-                    className="px-2.5 py-1 text-[#A89680] hover:text-[#FFF5EA] border border-[#443527] hover:border-[#6B5540] rounded-sm bg-[#14100D]/80 transition-colors uppercase tracking-wider"
+                    onClick={() => {
+                      forensicAudio.playPenFriction();
+                      setIsMinimized(true);
+                    }}
+                    onMouseEnter={() => forensicAudio.playPenFriction()}
+                    className="px-3 py-1.5 text-[#BBA58D] hover:text-[#FFF8EE] border border-[#54402E] hover:border-[#846648] rounded-sm bg-[#18130F]/90 transition-all uppercase tracking-wider shadow-sm"
                   >
                     [ MINIMIZE ]
                   </button>
                 )}
                 <button
-                  onClick={toggleGuide}
-                  className="px-2 py-1 text-[#6E5D4B] hover:text-[#A89680] transition-colors"
+                  onClick={() => {
+                    forensicAudio.playPenFriction();
+                    toggleGuide();
+                  }}
+                  className="px-2 py-1 text-[#7D6852] hover:text-[#D8C2A8] transition-colors font-bold"
                   title="Close Memo"
                 >
                   ✕
