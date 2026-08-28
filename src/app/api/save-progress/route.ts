@@ -3,16 +3,21 @@ import { CaseStore, type CaseSessionState } from "@/lib/db/caseStore";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as CaseSessionState;
+    const body = (await req.json()) as Partial<CaseSessionState> & { caseId: string };
 
     if (!body.caseId) {
       return NextResponse.json({ error: "caseId is required" }, { status: 400 });
     }
 
-    CaseStore.saveSession(body);
+    const updatedSession = CaseStore.saveSession(body);
 
     return NextResponse.json(
-      { success: true, caseId: body.caseId, savedAt: new Date().toISOString() },
+      {
+        success: true,
+        caseId: updatedSession.caseId,
+        savedAt: updatedSession.lastUpdated,
+        snapshotCount: updatedSession.snapshots.length,
+      },
       { status: 200 }
     );
   } catch (error) {
@@ -27,13 +32,17 @@ export async function GET(req: NextRequest) {
     const caseId = searchParams.get("caseId");
 
     if (!caseId) {
-      return NextResponse.json({ error: "caseId query parameter required" }, { status: 400 });
+      // Return list of all active session IDs
+      return NextResponse.json(
+        { activeSessions: CaseStore.getAllSessionIds() },
+        { status: 200 }
+      );
     }
 
     const session = CaseStore.getSession(caseId);
 
     if (!session) {
-      return NextResponse.json({ error: "Case session not found" }, { status: 404 });
+      return NextResponse.json({ error: `Case session #${caseId} not found` }, { status: 404 });
     }
 
     return NextResponse.json(session, { status: 200 });
