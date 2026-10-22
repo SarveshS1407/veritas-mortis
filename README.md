@@ -49,7 +49,10 @@
 # 1. Install dependencies
 pnpm install
 
-# 2. Start the local development server
+# 2. Run deterministic forensic engine test suite
+node --experimental-strip-types scripts/test-forensic-engine.ts
+
+# 3. Start the local development server
 pnpm dev
 ```
 

@@ -1,5 +1,5 @@
-import { generateCase } from "@/lib/proceduralGenerator";
-import type { SuspectArchetype, EvidenceNode } from "@/types/caseEngine";
+import { generateCase } from "../src/lib/proceduralGenerator.ts";
+import type { SuspectArchetype, EvidenceNode } from "../src/types/caseEngine.ts";
 
 console.log("=================================================");
 console.log("🕵️‍♂️ VERITAS MORTIS: PROCEDURAL THRILLER ENGINE AUDIT");

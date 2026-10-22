@@ -2,11 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { useCaseStore } from "@/lib/useCaseStore";
+import { forensicAudio } from "@/lib/forensicAudio";
 import EvidenceBoard from "./EvidenceBoard";
 import InterrogationConduit from "./InterrogationConduit";
 import CaseProgressionDock from "./CaseProgressionDock";
 import AccusationModal from "./AccusationModal";
 import InvestigationDialogueGuide from "./InvestigationDialogueGuide";
+import ActReversalCinematic from "../ActReversalCinematic";
+import SettingsModal from "../SettingsModal";
 
 interface InvestigationWorkspaceProps {
   onBackToMenu?: () => void;
@@ -17,8 +20,11 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
   const isLoading = useCaseStore((s) => s.isLoading);
   const currentAct = useCaseStore((s) => s.currentAct);
   const generateNewCase = useCaseStore((s) => s.generateNewCase);
+  const settings = useCaseStore((s) => s.settings);
+  const updateSettings = useCaseStore((s) => s.updateSettings);
 
   const [isAccusationOpen, setIsAccusationOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!currentCase && !isLoading) {
@@ -28,124 +34,159 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
 
   if (!currentCase) {
     return (
-      <div className="w-screen h-screen flex items-center justify-center bg-pitch relative overflow-hidden">
-        {/* Film grain on loading screen */}
-        <div className="pointer-events-none absolute inset-0 z-10 mix-blend-overlay opacity-15">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-            <filter id="loading-noise">
-              <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-            </filter>
-            <rect width="100%" height="100%" filter="url(#loading-noise)" />
-          </svg>
-        </div>
+      <div className="w-screen h-screen flex items-center justify-center bg-[#050505] relative overflow-hidden select-none">
         <div className="text-center z-20">
-          <div className="font-mono text-zinc-500 uppercase tracking-[0.3em] text-sm animate-pulse">
-            Loading Case File...
+          <div className="font-mono text-[#D4C5A9]/70 uppercase tracking-[0.3em] text-sm animate-pulse">
+            ASSEMBLING CRIME SCENE DOSSIER...
           </div>
-          <div className="mt-3 w-32 h-0.5 bg-zinc-800 mx-auto overflow-hidden rounded-full">
-            <div className="h-full bg-crimson animate-[pulse_1.5s_ease-in-out_infinite] w-1/3" />
+          <div className="mt-4 w-40 h-1 bg-[#1A1714] mx-auto overflow-hidden rounded-full">
+            <div className="h-full bg-[#8B0000] animate-[pulse_1.2s_ease-in-out_infinite] w-2/5" />
           </div>
+          <p className="font-mono text-[10px] text-neutral-600 mt-3 uppercase tracking-widest">
+            DETERMINISTIC MULBERRY32 PRNG GRAPH
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-screen h-screen flex flex-col bg-pitch overflow-hidden relative selection:bg-blood/40 selection:text-bone">
+    <div className="w-screen h-screen flex flex-col bg-[#050505] overflow-hidden relative select-none">
+      {/* ── 35mm Film Grain Overlay ── */}
+      {settings.filmGrainEnabled && (
+        <div className="pointer-events-none absolute inset-0 z-50 mix-blend-overlay opacity-[0.16]">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="none" className="w-full h-full">
+            <filter id="workspace-grain">
+              <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" stitchTiles="stitch" />
+            </filter>
+            <rect width="100%" height="100%" filter="url(#workspace-grain)" />
+          </svg>
+        </div>
+      )}
 
-      {/* ── ATMOSPHERIC OVERLAYS ── */}
-
-      {/* 35mm Film Grain */}
-      <div className="pointer-events-none absolute inset-0 z-50 mix-blend-overlay opacity-[0.18]">
-        <svg viewBox="0 0 200 200" preserveAspectRatio="none" className="w-full h-full">
-          <filter id="workspace-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#workspace-grain)" />
-        </svg>
-      </div>
-
-      {/* Heavy Peripheral Vignette */}
-      <div
-        className="pointer-events-none absolute inset-0 z-40"
-        style={{ boxShadow: "inset 0 0 160px rgba(0, 0, 0, 0.95)" }}
-      />
-
-      {/* Harsh Overhead Interrogation Lighting */}
+      {/* ── Chiaroscuro Atmospheric Vignette ── */}
       <div
         className="pointer-events-none absolute inset-0 z-30"
         style={{
-          background: "radial-gradient(circle at 60% 40%, rgba(200, 190, 160, 0.12) 0%, rgba(5, 5, 8, 0.96) 75%)",
+          boxShadow: "inset 0 0 160px rgba(0, 0, 0, 0.95)",
         }}
       />
 
-      {/* Fluorescent Flicker */}
+      {/* Harsh Overhead Interrogation Spotlight */}
       <div
-        className="pointer-events-none absolute inset-0 bg-white/[0.015] mix-blend-screen z-30"
-        style={{ animation: "light-flicker 10s infinite" }}
+        className="pointer-events-none absolute inset-0 z-20"
+        style={{
+          background: "radial-gradient(circle at 60% 40%, rgba(212, 197, 169, 0.08) 0%, rgba(5, 5, 8, 0.96) 80%)",
+        }}
       />
 
-      {/* Bottom gradient fade */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50 z-30" />
+      {/* ── TOP BAR CONTROLS HUD ── */}
+      <header className="relative z-40 w-full px-4 py-2.5 bg-[#121010]/95 border-b border-[#2A201A] flex items-center justify-between text-xs font-mono text-[#D4C5A9]/80 backdrop-blur-sm">
+        {/* Left: Precinct Nav */}
+        <div className="flex items-center gap-3">
+          {onBackToMenu && (
+            <button
+              onClick={() => {
+                forensicAudio.playFolderOpen();
+                onBackToMenu();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1714] border border-[#3B2A1E] hover:border-zinc-500 text-[10px] text-neutral-300 hover:text-white rounded-sm transition-all uppercase tracking-wider cursor-pointer"
+            >
+              <span>←</span>
+              <span>Precinct Office</span>
+            </button>
+          )}
 
-      {/* ── TOP BAR CONTROLS ── */}
+          <div className="hidden sm:flex items-center gap-2 text-[10px] text-neutral-400">
+            <span className="w-2 h-2 rounded-full bg-[#8B0000]" />
+            <span className="uppercase font-bold text-[#E8E3D9]">
+              {currentCase.title}
+            </span>
+          </div>
+        </div>
 
-      {/* Back to Menu */}
-      {onBackToMenu && (
-        <button
-          onClick={onBackToMenu}
-          className="absolute top-4 left-4 z-[60] flex items-center gap-2 p-2 px-3 bg-charcoal/80 border border-zinc-700/50 backdrop-blur-sm text-[10px] font-mono text-zinc-400 hover:text-bone hover:border-zinc-500 transition-all uppercase tracking-widest rounded-sm"
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-            <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-          </svg>
-          Abort Case
-        </button>
-      )}
+        {/* Right: Audio, Settings & Indictment Button */}
+        <div className="flex items-center gap-3">
+          {/* Quick Mute Toggle */}
+          <button
+            onClick={() => {
+              updateSettings({ isMuted: !settings.isMuted });
+            }}
+            className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            title={settings.isMuted ? "Unmute Audio" : "Mute Audio"}
+          >
+            {settings.isMuted ? (
+              <span className="text-[11px] text-red-500 font-bold">[MUTED]</span>
+            ) : (
+              <span className="text-[11px] text-neutral-300">[AUDIO ON]</span>
+            )}
+          </button>
 
-      {/* File Indictment Button (Act 3 only) */}
-      {currentAct === "act3_climax" && (
-        <button
-          onClick={() => setIsAccusationOpen(true)}
-          className="absolute top-4 right-4 z-[60] flex items-center gap-2 px-4 py-2.5 bg-blood/90 border border-red-900 backdrop-blur-sm text-[11px] font-mono font-bold text-bone hover:bg-red-900 transition-all uppercase tracking-widest shadow-[0_0_25px_rgba(153,27,27,0.5)] rounded-sm group"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 group-hover:-rotate-12 transition-transform">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-          File Indictment
-        </button>
-      )}
+          {/* Config Settings */}
+          <button
+            onClick={() => {
+              forensicAudio.playPhotoInspect();
+              setIsSettingsOpen(true);
+            }}
+            className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer text-[11px]"
+            title="Investigator Settings"
+          >
+            [CONFIG]
+          </button>
 
-      {/* ── THREE-ZONE WORKSPACE ── */}
+          {/* File Indictment Button */}
+          <button
+            onClick={() => {
+              forensicAudio.playStampSlam();
+              setIsAccusationOpen(true);
+            }}
+            className={`flex items-center gap-1.5 px-4 py-1.5 font-bold uppercase tracking-widest text-[11px] rounded-sm transition-all cursor-pointer shadow-md ${
+              currentAct === "act3_climax"
+                ? "bg-[#8B0000] hover:bg-red-800 text-white border border-red-600 shadow-[0_0_20px_rgba(180,0,0,0.6)] animate-pulse"
+                : "bg-[#1C1510] hover:bg-[#2A1E16] text-[#D4C5A9] border border-[#5C4A38]"
+            }`}
+          >
+            <span>⚖️</span>
+            <span>FILE INDICTMENT</span>
+          </button>
+        </div>
+      </header>
 
-      {/* Main Content: Evidence Board (Left 42%) + Interrogation Conduit (Right 58%) */}
-      <div className="flex-1 flex w-full relative z-10 min-h-0">
-        {/* ZONE 1: Evidence Board */}
-        <div className="w-[42%] h-full relative">
+      {/* ── TWO-ZONE SPLIT WORKSPACE ── */}
+      <div className="flex-1 flex flex-col md:flex-row w-full relative z-10 min-h-0 overflow-hidden">
+        {/* ZONE 1: Evidence Board (Left 46%) */}
+        <div className="w-full md:w-[48%] h-1/2 md:h-full relative border-b md:border-b-0 md:border-r border-zinc-800">
           <EvidenceBoard />
         </div>
 
-        {/* ZONE 2: Interrogation Conduit / Document Inspection */}
-        <div className="w-[58%] h-full relative">
+        {/* ZONE 2: Interrogation Conduit / Suspect Psychology (Right 54%) */}
+        <div className="w-full md:w-[52%] h-1/2 md:h-full relative">
           <InterrogationConduit />
         </div>
       </div>
 
-      {/* ZONE 3: Case Progression Dock */}
+      {/* ── ZONE 3: Bottom Case Progression Dock ── */}
       <div className="h-28 w-full relative z-20 flex-shrink-0">
         <CaseProgressionDock />
       </div>
 
-      {/* ── DIEGETIC DETECTIVE ONBOARDING HUD & SUBTITLE GUIDE ── */}
+      {/* ── DIEGETIC DETECTIVE ONBOARDING HUD & TYPEWRITER SUBTITLES ── */}
       <InvestigationDialogueGuide />
 
-      {/* ── ACCUSATION MODAL ── */}
+      {/* ── ACT II REVERSAL CINEMATIC MODAL ── */}
+      <ActReversalCinematic />
+
+      {/* ── ACCUSATION / VERDICT MODAL ── */}
       <AccusationModal
         isOpen={isAccusationOpen}
         onClose={() => setIsAccusationOpen(false)}
+        onReturnToMenu={onBackToMenu}
+      />
+
+      {/* ── SETTINGS MODAL ── */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );

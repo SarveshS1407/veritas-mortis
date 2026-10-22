@@ -1,4 +1,4 @@
-import { CaseGraph, EvidenceNode, SuspectArchetype } from "@/types/caseEngine";
+import type { CaseGraph, EvidenceNode, SuspectArchetype } from "../types/caseEngine.ts";
 
 export interface ValidationIssue {
   ruleId: string;

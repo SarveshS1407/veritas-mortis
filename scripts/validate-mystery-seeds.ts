@@ -1,5 +1,5 @@
-import { generateCase } from "@/lib/proceduralGenerator";
-import { CaseSolvabilityValidator } from "@/lib/caseValidator";
+import { generateCase } from "../src/lib/proceduralGenerator.ts";
+import { CaseSolvabilityValidator } from "../src/lib/caseValidator.ts";
 
 console.log("===============================================================");
 console.log("🕵️ VERITAS MORTIS: 100-SEED PROCEDURAL SOLVABILITY BENCHMARK");

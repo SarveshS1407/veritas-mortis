@@ -1,16 +1,11 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCaseStore } from "@/lib/useCaseStore";
+import { forensicAudio } from "@/lib/forensicAudio";
 import ForensicToolDock from "./ForensicToolDock";
-
-interface DynamicConnection {
-  id: string;
-  from: string;
-  to: string;
-  color: "red" | "green";
-}
+import { EvidenceNode } from "@/types/case";
 
 export default function EvidenceBoard() {
   const currentCase = useCaseStore((s) => s.currentCase);
@@ -19,6 +14,9 @@ export default function EvidenceBoard() {
   const activeEvidenceId = useCaseStore((s) => s.activeEvidenceId);
   const boardNodePositions = useCaseStore((s) => s.boardNodePositions);
   const currentAct = useCaseStore((s) => s.currentAct);
+  const redStrings = useCaseStore((s) => s.redStrings);
+  const addRedString = useCaseStore((s) => s.addRedString);
+  const removeRedString = useCaseStore((s) => s.removeRedString);
   const setActiveSuspect = useCaseStore((s) => s.setActiveSuspect);
   const setActiveEvidence = useCaseStore((s) => s.setActiveEvidence);
   const examineEvidence = useCaseStore((s) => s.examineEvidence);
@@ -26,30 +24,12 @@ export default function EvidenceBoard() {
 
   const boardRef = useRef<HTMLDivElement>(null);
   const [boardDimensions, setBoardDimensions] = useState({ width: 1000, height: 800 });
-
-  // ── Dynamic Connections (Red = Confirmed Suspect, Green = Cleared Alibi) ──
-  const [connections, setConnections] = useState<DynamicConnection[]>([
-    { id: "c1", from: "suspect-0", to: "ev-0", color: "red" },
-    { id: "c2", from: "ev-0", to: "ev-1", color: "red" },
-    { id: "c3", from: "suspect-1", to: "ev-2", color: "green" },
-    { id: "c4", from: "ev-2", to: "sticky-1", color: "green" },
-    { id: "c5", from: "sticky-1", to: "sticky-2", color: "red" },
-  ]);
-
   const [activeLinkingPin, setActiveLinkingPin] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
-  // ── Encrypted Terminal State ──
-  const [terminalInput, setTerminalInput] = useState("");
-  const [terminalLogs, setTerminalLogs] = useState<string[]>([
-    "CYBER FORENSICS MAINFRAME v4.19 [SECURE]",
-    "TYPE 'HELP' OR ENTER DECRYPTION PASSCODE (e.g. 1978)",
-  ]);
-  const [isDecryptedNodeUnlocked, setIsDecryptedNodeUnlocked] = useState(false);
-
-  // ── Lightbox Inspection Modal State ──
+  // Lightbox Inspection Modal State
   const [inspectedItem, setInspectedItem] = useState<{
-    type: "suspect" | "blood_report" | "fingerprint" | "notebook" | "sticky" | "decrypted";
+    type: "suspect" | "evidence";
     data: any;
   } | null>(null);
 
@@ -68,22 +48,34 @@ export default function EvidenceBoard() {
 
   if (!currentCase) return null;
 
-  const suspects = currentCase.suspects;
+  const suspects = currentCase.suspects || [];
+  const evidenceList: EvidenceNode[] = currentCase.evidenceNodes || currentCase.evidence || [];
+
   const actOrder = ["act1_hook", "act2_reversal", "act3_climax"];
   const currentActIndex = actOrder.indexOf(currentAct);
-  const visibleEvidence = currentCase.evidence.filter((ev) => {
+
+  const visibleEvidence = evidenceList.filter((ev) => {
     const evActIndex = actOrder.indexOf(ev.unlocksInAct);
     return evActIndex <= currentActIndex;
   });
 
-  const getNodePos = (nodeId: string, defaultPos: { x: number; y: number }) => {
-    return boardNodePositions[nodeId] || defaultPos;
+  const getNodePos = (nodeId: string, defaultPos?: { x: number; y: number }) => {
+    return boardNodePositions[nodeId] || defaultPos || { x: 50, y: 50 };
   };
 
-  const getComposureColor = (composure: number) => {
-    if (composure > 70) return "bg-green-700";
-    if (composure > 40) return "bg-yellow-600";
-    return "bg-red-700";
+  const getComposureColor = (level: string = "CALM") => {
+    switch (level) {
+      case "CALM":
+        return "bg-emerald-600";
+      case "DEFLECTING":
+        return "bg-amber-600";
+      case "CORNERED":
+        return "bg-orange-600";
+      case "BROKEN":
+        return "bg-red-700 animate-pulse";
+      default:
+        return "bg-emerald-600";
+    }
   };
 
   // Calculate coordinates of pin in board pixel space
@@ -92,14 +84,11 @@ export default function EvidenceBoard() {
     const s = suspects.find((sus) => sus.id === nodeId);
     if (s) pos = getNodePos(s.id, s.boardPosition);
     const e = visibleEvidence.find((ev) => ev.id === nodeId);
-    if (e) pos = getNodePos(e.id, e.boardPosition);
-    if (nodeId === "sticky-1") pos = getNodePos("sticky-1", { x: 78, y: 45 });
-    if (nodeId === "sticky-2") pos = getNodePos("sticky-2", { x: 82, y: 72 });
-    if (nodeId === "node-decrypted") pos = getNodePos("node-decrypted", { x: 38, y: 58 });
+    if (e) pos = getNodePos(e.id, e.boardPosition || e.coordinates);
 
     return {
       x: (pos.x / 100) * boardDimensions.width,
-      y: (pos.y / 100) * boardDimensions.height - 30, // top center pushpin offset
+      y: (pos.y / 100) * boardDimensions.height - 25,
     };
   };
 
@@ -108,79 +97,35 @@ export default function EvidenceBoard() {
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const dist = Math.hypot(dx, dy);
-    const sag = Math.min(50, Math.max(15, dist * 0.12));
+    const sag = Math.min(45, Math.max(12, dist * 0.12));
     const midX = (p1.x + p2.x) / 2;
     const midY = (p1.y + p2.y) / 2 + sag;
     return `M ${p1.x},${p1.y} Q ${midX},${midY} ${p2.x},${p2.y}`;
   };
 
-  // Toggle yarn string between Red and Green
-  const toggleStringColor = (id: string) => {
-    setConnections((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, color: c.color === "red" ? "green" : "red" } : c))
-    );
-  };
-
-  // Handle Pin click for interactive string drawing
-  const handlePinClick = (nodeId: string, e: React.MouseEvent) => {
+  // Handle Pin click / tap for interactive red string connection
+  const handlePinClick = (nodeId: string, e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     if (!activeLinkingPin) {
+      forensicAudio.playStringPluck();
       setActiveLinkingPin(nodeId);
     } else if (activeLinkingPin === nodeId) {
       setActiveLinkingPin(null);
     } else {
       // Connect activeLinkingPin to nodeId
-      const exists = connections.some(
+      const exists = redStrings.some(
         (c) =>
-          (c.from === activeLinkingPin && c.to === nodeId) ||
-          (c.from === nodeId && c.to === activeLinkingPin)
+          (c.fromNodeId === activeLinkingPin && c.toNodeId === nodeId) ||
+          (c.fromNodeId === nodeId && c.toNodeId === activeLinkingPin)
       );
       if (!exists) {
-        setConnections((prev) => [
-          ...prev,
-          {
-            id: `c-${Date.now()}`,
-            from: activeLinkingPin,
-            to: nodeId,
-            color: "red",
-          },
-        ]);
+        addRedString(activeLinkingPin, nodeId);
       }
       setActiveLinkingPin(null);
     }
   };
 
-  // Handle terminal command execution
-  const handleTerminalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cmd = terminalInput.trim().toLowerCase();
-    setTerminalInput("");
-    if (!cmd) return;
-
-    const newLogs = [...terminalLogs, `> ${cmd}`];
-
-    if (cmd === "help") {
-      newLogs.push("COMMANDS: STATUS, CLEAR, 1978, VERITAS, DECRYPT");
-    } else if (cmd === "status") {
-      newLogs.push(`LEADS: ${visibleEvidence.length} | SUSPECTS: ${suspects.length} | STRINGS: ${connections.length}`);
-    } else if (cmd === "clear") {
-      setTerminalLogs([]);
-      return;
-    } else if (cmd === "1978" || cmd === "veritas" || cmd === "decrypt") {
-      newLogs.push("[AUTH GRANTED] DECRYPTING ENCRYPTED TRANSMISSION...");
-      newLogs.push("[SUCCESS] HIDDEN WIRETAP EVIDENCE PINNED TO BOARD.");
-      setIsDecryptedNodeUnlocked(true);
-      setConnections((prev) => [
-        ...prev,
-        { id: `c-dec-1`, from: "ev-0", to: "node-decrypted", color: "red" },
-        { id: `c-dec-2`, from: "node-decrypted", to: "suspect-0", color: "red" },
-      ]);
-    } else {
-      newLogs.push(`ERR: PASSCODE '${cmd}' INVALID. ACCESS DENIED.`);
-    }
-
-    setTerminalLogs(newLogs);
-  };
+  const isUVMode = activeForensicTool === "uv_blacklight";
 
   return (
     <div
@@ -194,38 +139,42 @@ export default function EvidenceBoard() {
       onClick={() => {
         if (activeLinkingPin) setActiveLinkingPin(null);
       }}
-      className="relative w-full h-full overflow-hidden select-none"
+      className={`relative w-full h-full overflow-hidden select-none transition-colors duration-500 ${
+        isUVMode ? "bg-[#080210]" : "bg-[#160F0B]"
+      }`}
       style={{
-        backgroundImage: `
-          radial-gradient(ellipse at 50% 35%, rgba(0,0,0,0) 0%, rgba(10,5,2,0.7) 75%, rgba(5,2,1,0.95) 100%),
-          url('/image_559261.jpg'),
-          radial-gradient(circle at 50% 50%, #7d4e2d 0%, #523118 60%, #2e1a0c 100%)
-        `,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        boxShadow: "inset 0 0 140px rgba(0,0,0,0.9)",
+        backgroundImage: isUVMode
+          ? `radial-gradient(circle at 50% 50%, rgba(88,28,135,0.18) 0%, rgba(5,2,10,0.95) 100%)`
+          : `
+            radial-gradient(ellipse at 50% 35%, rgba(0,0,0,0) 0%, rgba(10,5,2,0.7) 75%, rgba(5,2,1,0.95) 100%),
+            radial-gradient(circle at 50% 50%, #4a2f1b 0%, #2e1a0c 70%, #150a04 100%)
+          `,
+        boxShadow: "inset 0 0 140px rgba(0,0,0,0.95)",
       }}
     >
-      {/* ── AMBIENT OVERHEAD SPOTLIGHT VIGNETTE ── */}
-      <div
-        className="pointer-events-none absolute inset-0 z-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 30%, rgba(255,235,180,0.09) 0%, rgba(0,0,0,0.65) 75%, rgba(0,0,0,0.92) 100%)",
-        }}
-      />
+      {/* ── UV Mode Glowing Ambient Light ── */}
+      {isUVMode && (
+        <div
+          className="pointer-events-none absolute inset-0 z-0 animate-pulse"
+          style={{
+            background: "radial-gradient(circle at 45% 45%, rgba(168,85,247,0.15) 0%, transparent 60%)",
+          }}
+        />
+      )}
 
-      {/* ── TOP FORENSIC HEADER ── */}
-      <header className="absolute top-3 left-5 z-10 pointer-events-none">
-        <h1 className="text-sm md:text-base font-black tracking-widest text-[#e8d7c3] uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-          CASE #{currentCase.id.slice(0, 8)} • EVIDENCE BOARD
+      {/* ── Top Forensic Header ── */}
+      <header className="absolute top-3 left-4 z-10 pointer-events-none">
+        <h1 className="text-xs md:text-sm font-bold tracking-widest text-[#E8D7C3] uppercase drop-shadow-md">
+          CASE #{currentCase.caseNumber} · DEDUCTION BOARD
         </h1>
-        <p className="text-[9px] md:text-[10px] text-[#9b856f] tracking-widest uppercase">
-          DRAG TO REPOSITION • CLICK PIN TO LINK • DBL-CLICK TO INSPECT
+        <p className="text-[8px] md:text-[9px] text-[#A68F7B] tracking-widest uppercase mt-0.5">
+          {isUVMode
+            ? "🔦 365NM UV BLACKLIGHT ACTIVE · LATENT TRACES VISIBLE"
+            : "TAP/CLICK PINS TO DRAW RED STRING · TAP CARDS TO EXAMINE"}
         </p>
       </header>
 
-      {/* ── DYNAMIC CURVED YARN STRING OVERLAY (RED & GREEN WITH GRAVITY SAG) ── */}
+      {/* ── Dynamic Red Yarn Strings SVG Overlay ── */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
         <defs>
           <filter id="yarn-fiber-board" x="-20%" y="-20%" width="140%" height="140%">
@@ -234,41 +183,46 @@ export default function EvidenceBoard() {
           </filter>
         </defs>
 
-        {connections.map((conn) => {
-          const p1 = getNodePixelCoords(conn.from);
-          const p2 = getNodePixelCoords(conn.to);
+        {redStrings.map((conn) => {
+          const p1 = getNodePixelCoords(conn.fromNodeId);
+          const p2 = getNodePixelCoords(conn.toNodeId);
           if (!p1 || !p2) return null;
 
           return (
-            <g key={conn.id} className="pointer-events-auto cursor-pointer" onClick={() => toggleStringColor(conn.id)}>
-              {/* Thick invisible hit area for easy clicking */}
-              <path d={createSagCurveD(p1, p2)} stroke="transparent" strokeWidth="16" fill="none" />
-              {/* Visible Yarn String */}
+            <g
+              key={conn.id}
+              className="pointer-events-auto cursor-pointer group"
+              onClick={() => {
+                forensicAudio.playStringPluck();
+                removeRedString(conn.id);
+              }}
+            >
+              {/* Thick hit area for easy clicking */}
+              <path d={createSagCurveD(p1, p2)} stroke="transparent" strokeWidth="18" fill="none" />
+              {/* Visible Crimson Yarn String */}
               <path
                 d={createSagCurveD(p1, p2)}
-                stroke={conn.color === "red" ? "#a80c0c" : "#1b8a3e"}
-                strokeWidth="3.2"
+                stroke="#8B0000"
+                strokeWidth="2.8"
                 strokeLinecap="round"
                 fill="none"
                 filter="url(#yarn-fiber-board)"
+                className="group-hover:stroke-red-400 transition-colors"
                 style={{
-                  filter:
-                    conn.color === "red"
-                      ? "drop-shadow(0 3px 4px rgba(40,0,0,0.75))"
-                      : "drop-shadow(0 3px 4px rgba(0,30,10,0.75))",
+                  filter: "drop-shadow(0 3px 4px rgba(40,0,0,0.85))",
                 }}
               />
             </g>
           );
         })}
 
-        {/* Live Linking Preview String */}
+        {/* Live Linking String Preview */}
         {activeLinkingPin && mousePos && (
           <path
             d={createSagCurveD(getNodePixelCoords(activeLinkingPin), mousePos)}
-            stroke="#d42222"
-            strokeWidth="2.5"
-            strokeDasharray="6 4"
+            stroke="#D42222"
+            strokeWidth="2.4"
+            strokeDasharray="5 4"
             fill="none"
           />
         )}
@@ -277,7 +231,7 @@ export default function EvidenceBoard() {
       {/* ── 1. SUSPECT POLAROID NODES ── */}
       {suspects.map((suspect, idx) => {
         const pos = getNodePos(suspect.id, suspect.boardPosition);
-        const rotation = (idx % 2 === 0 ? -1 : 1) * (4 + (idx * 2) % 4);
+        const rotation = (idx % 2 === 0 ? -1 : 1) * (3 + (idx * 2) % 4);
 
         return (
           <motion.div
@@ -289,14 +243,19 @@ export default function EvidenceBoard() {
             onDragEnd={(_, info) => {
               if (!boardRef.current) return;
               const rect = boardRef.current.getBoundingClientRect();
-              const x = Math.max(5, Math.min(95, ((info.point.x - rect.left) / rect.width) * 100));
-              const y = Math.max(5, Math.min(95, ((info.point.y - rect.top) / rect.height) * 100));
+              const x = Math.max(8, Math.min(92, ((info.point.x - rect.left) / rect.width) * 100));
+              const y = Math.max(12, Math.min(88, ((info.point.y - rect.top) / rect.height) * 100));
               updateNodePosition(suspect.id, { x, y });
             }}
-            onClick={() => setActiveSuspect(suspect.id)}
+            onClick={() => {
+              forensicAudio.playPaperSlide();
+              setActiveSuspect(suspect.id);
+            }}
             onDoubleClick={() => setInspectedItem({ type: "suspect", data: suspect })}
-            className={`absolute w-[140px] cursor-grab active:cursor-grabbing z-20 transition-shadow ${
-              activeSuspectId === suspect.id ? "ring-2 ring-crimson shadow-[0_0_24px_rgba(180,0,0,0.65)]" : ""
+            className={`absolute w-[125px] md:w-[140px] cursor-grab active:cursor-grabbing z-20 transition-all ${
+              activeSuspectId === suspect.id
+                ? "ring-2 ring-[#8B0000] shadow-[0_0_25px_rgba(180,0,0,0.7)] scale-105"
+                : "shadow-xl"
             }`}
             style={{
               left: `${pos.x}%`,
@@ -307,39 +266,40 @@ export default function EvidenceBoard() {
             {/* 3D Pushpin */}
             <div
               onClick={(e) => handlePinClick(suspect.id, e)}
-              className={`absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full cursor-pointer z-30 shadow-[0_4px_8px_rgba(0,0,0,0.8)] border border-red-950 transition-transform hover:scale-125 ${
-                activeLinkingPin === suspect.id ? "ring-2 ring-red-500 animate-ping" : ""
+              className={`absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full cursor-pointer z-30 shadow-lg border border-red-950 transition-transform hover:scale-125 ${
+                activeLinkingPin === suspect.id ? "ring-2 ring-red-400 animate-ping" : ""
               }`}
               style={{
-                background: "radial-gradient(circle at 35% 35%, #ff4d4d 0%, #b30000 55%, #4a0000 100%)",
+                background: "radial-gradient(circle at 35% 35%, #ff4d4d 0%, #8B0000 65%, #300000 100%)",
               }}
-              title="Click pin to link yarn string"
+              title="Click pin to link red yarn"
             />
 
-            {/* Vintage Polaroid Card */}
-            <div className="bg-[#fdfbf7] p-2 pb-5 rounded-xs shadow-[0_10px_24px_rgba(0,0,0,0.65)] border border-[#e2dacb]">
-              <div className="w-full h-24 bg-[#231b17] border border-[#d2c7b5] flex items-center justify-center relative overflow-hidden">
-                <svg viewBox="0 0 100 100" className="w-16 h-16 opacity-60 fill-[#d1c2ab]">
+            {/* Polaroid Card */}
+            <div className="bg-[#FAF7F0] p-2 pb-4 rounded-xs border border-[#D5C9B5] shadow-lg">
+              <div className="w-full h-20 md:h-24 bg-[#1E1714] border border-[#C5B7A0] flex items-center justify-center relative overflow-hidden">
+                <svg viewBox="0 0 100 100" className="w-14 h-14 opacity-50 fill-[#D1C2AB]">
                   <circle cx="50" cy="35" r="18" />
                   <path d="M 20 85 C 20 60, 80 60, 80 85 Z" />
                 </svg>
-                {suspect.isGuilty && (
-                  <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                )}
               </div>
-              <div className="mt-2 text-center">
-                <p className="font-serif font-black text-[12px] text-[#1a1008] leading-tight truncate">
+
+              <div className="mt-1.5 text-center">
+                <p className="font-serif font-bold text-[11px] md:text-xs text-[#1A1008] leading-tight truncate">
                   {suspect.name}
                 </p>
-                <p className="font-mono text-[8.5px] text-[#6b5a4b] font-bold uppercase truncate">
-                  {suspect.role}
+                <p className="font-mono text-[8px] text-[#6B5A4B] font-bold uppercase truncate">
+                  {suspect.occupation || suspect.role}
                 </p>
               </div>
-              {/* Composure meter */}
-              <div className="mx-1 mt-2 h-1 bg-zinc-300 rounded-full overflow-hidden border border-zinc-400">
+
+              {/* Stress / Composure status indicator */}
+              <div className="mx-1 mt-1.5 h-1 bg-neutral-300 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-500 ${getComposureColor(suspect.composure)}`}
-                  style={{ width: `${suspect.composure}%` }}
+                  className={`h-full transition-all duration-500 ${getComposureColor(
+                    suspect.composureLevel || (suspect.composure as string)
+                  )}`}
+                  style={{ width: `${Math.max(15, suspect.stressLevel || 20)}%` }}
                 />
               </div>
             </div>
@@ -349,10 +309,10 @@ export default function EvidenceBoard() {
 
       {/* ── 2. FORENSIC EVIDENCE ITEMS ── */}
       {visibleEvidence.map((item, idx) => {
-        const pos = getNodePos(item.id, item.boardPosition);
-        const rotation = (idx % 2 === 0 ? 1 : -1) * (3 + (idx * 3) % 6);
-        const isBloodReport = item.category === "autopsy" || item.category === "toxicology";
-        const isFingerprint = item.category === "fingerprint";
+        const pos = getNodePos(item.id, item.boardPosition || item.coordinates);
+        const rotation = (idx % 2 === 0 ? 1 : -1) * (2 + (idx * 2) % 5);
+        const isUVHidden = item.type === "UV_HIDDEN" || Boolean(item.hiddenUVDetails);
+        const isExamined = item.status === "examined" || item.status === "analyzed";
 
         return (
           <motion.div
@@ -364,22 +324,20 @@ export default function EvidenceBoard() {
             onDragEnd={(_, info) => {
               if (!boardRef.current) return;
               const rect = boardRef.current.getBoundingClientRect();
-              const x = Math.max(5, Math.min(95, ((info.point.x - rect.left) / rect.width) * 100));
-              const y = Math.max(5, Math.min(95, ((info.point.y - rect.top) / rect.height) * 100));
+              const x = Math.max(8, Math.min(92, ((info.point.x - rect.left) / rect.width) * 100));
+              const y = Math.max(12, Math.min(88, ((info.point.y - rect.top) / rect.height) * 100));
               updateNodePosition(item.id, { x, y });
             }}
             onClick={() => {
+              forensicAudio.playPaperSlide();
               setActiveEvidence(item.id);
               examineEvidence(item.id);
             }}
-            onDoubleClick={() =>
-              setInspectedItem({
-                type: isBloodReport ? "blood_report" : isFingerprint ? "fingerprint" : "notebook",
-                data: item,
-              })
-            }
-            className={`absolute cursor-grab active:cursor-grabbing z-20 transition-shadow ${
-              activeEvidenceId === item.id ? "ring-2 ring-amber-500 shadow-[0_0_24px_rgba(200,150,50,0.6)]" : ""
+            onDoubleClick={() => setInspectedItem({ type: "evidence", data: item })}
+            className={`absolute cursor-grab active:cursor-grabbing z-20 transition-all ${
+              activeEvidenceId === item.id
+                ? "ring-2 ring-amber-500 shadow-[0_0_24px_rgba(200,150,50,0.7)] scale-105"
+                : "shadow-md"
             }`}
             style={{
               left: `${pos.x}%`,
@@ -390,192 +348,62 @@ export default function EvidenceBoard() {
             {/* 3D Pushpin */}
             <div
               onClick={(e) => handlePinClick(item.id, e)}
-              className={`absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full cursor-pointer z-30 shadow-[0_4px_8px_rgba(0,0,0,0.8)] border border-red-950 transition-transform hover:scale-125 ${
-                activeLinkingPin === item.id ? "ring-2 ring-red-500 animate-ping" : ""
+              className={`absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full cursor-pointer z-30 shadow-lg border border-red-950 transition-transform hover:scale-125 ${
+                activeLinkingPin === item.id ? "ring-2 ring-red-400 animate-ping" : ""
               }`}
               style={{
-                background: "radial-gradient(circle at 35% 35%, #ff4d4d 0%, #b30000 55%, #4a0000 100%)",
+                background: "radial-gradient(circle at 35% 35%, #ff4d4d 0%, #8B0000 65%, #300000 100%)",
               }}
-              title="Click pin to link yarn string"
+              title="Click pin to link red yarn"
             />
 
-            {/* A. Official Blood Analyst Medical Report Document */}
-            {isBloodReport && (
-              <div className="w-[180px] bg-[#f4ede1] p-3 border border-[#d4c8b4] rounded-xs shadow-[0_10px_24px_rgba(0,0,0,0.65)] relative overflow-hidden">
-                <div className="flex justify-between items-center text-[7.5px] font-mono font-black border-b border-[#2b180d] pb-1 text-[#2b180d]">
-                  <span>DIV. 09 PATHOLOGY</span>
-                  <span>LAB #B-774</span>
-                </div>
-                <p className="font-serif font-black text-[10px] text-[#1c120c] uppercase mt-1 leading-tight">
-                  {item.title}
-                </p>
-                <div className="text-[7.5px] font-mono text-[#3d2f24] mt-1 space-y-0.5">
-                  <p>STATUS: EXAMINED</p>
-                  <p className="line-clamp-2">{item.summary}</p>
-                </div>
-                {/* Rotated Red CONFIDENTIAL Stamp */}
-                <div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-18 border-2 border-dashed border-[#a00c0c] text-[#a00c0c] font-mono font-black text-[10px] tracking-widest px-2 py-0.5 pointer-events-none opacity-85"
-                  style={{ mixBlendMode: "multiply" }}
-                >
-                  CONFIDENTIAL
-                </div>
-              </div>
-            )}
-
-            {/* B. Acetate Fingerprint Scan */}
-            {isFingerprint && (
-              <div className="w-[150px] bg-white/45 backdrop-blur-[3px] p-3 border border-white/75 rounded-xs shadow-[0_10px_24px_rgba(0,0,0,0.5)] flex flex-col items-center">
-                <span className="text-[7.5px] font-mono font-black tracking-widest text-[#1a1209] uppercase">
-                  LATENT PRINT LIFT
+            {/* Evidence Card Surface */}
+            <div
+              className={`w-[140px] md:w-[160px] p-2.5 rounded-xs border transition-all ${
+                isUVMode && isUVHidden
+                  ? "bg-[#180A28] border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.7)] text-purple-200"
+                  : isExamined
+                  ? "bg-[#FAF7F0] border-[#C8BCA6] text-[#1A1008]"
+                  : "bg-[#ECE4D0] border-[#B5A58E] text-[#2B1B10]"
+              }`}
+            >
+              <div className="flex justify-between items-center text-[7px] font-mono font-bold uppercase pb-1 border-b border-black/15">
+                <span className={isUVMode && isUVHidden ? "text-purple-400 font-black" : "text-[#8B0000]"}>
+                  {item.type}
                 </span>
-                <svg className="w-16 h-18 my-1 opacity-85 mix-blend-multiply" viewBox="0 0 100 120">
-                  <g fill="none" stroke="#2b1408" strokeWidth="2" strokeLinecap="round">
-                    <ellipse cx="50" cy="60" rx="8" ry="12" />
-                    <ellipse cx="50" cy="60" rx="16" ry="24" strokeDasharray="45 5" />
-                    <ellipse cx="50" cy="60" rx="24" ry="36" strokeDasharray="70 8" />
-                    <ellipse cx="50" cy="60" rx="32" ry="46" strokeDasharray="90 12" />
-                  </g>
-                </svg>
-                <p className="font-mono text-[8px] font-bold text-[#1a1209] text-center truncate w-full">
-                  {item.title}
-                </p>
+                <span className="text-neutral-500">{item.unlocksInAct.toUpperCase()}</span>
               </div>
-            )}
 
-            {/* C. Default Tag / Torn Notebook Document */}
-            {!isBloodReport && !isFingerprint && (
-              <div className="w-[160px] bg-[#fffcee] p-3 rounded-xs shadow-[0_8px_20px_rgba(0,0,0,0.6)] border-l-4 border-amber-800">
-                <span className="font-mono text-[7px] font-black uppercase text-amber-900 bg-amber-100 px-1 py-0.5 rounded">
-                  {item.category}
+              <h4 className="font-serif font-bold text-[10px] md:text-[11px] uppercase mt-1 leading-tight line-clamp-2">
+                {item.title || item.label}
+              </h4>
+
+              <p className="font-mono text-[7.5px] mt-1 line-clamp-2 opacity-80 leading-relaxed">
+                {isUVMode && isUVHidden
+                  ? item.hiddenUVDetails || "[365nm UV]: Latent chemical whorl revealed!"
+                  : item.summary}
+              </p>
+
+              {/* Status Stamp */}
+              <div className="mt-2 pt-1 border-t border-black/10 flex justify-between items-center text-[7px] font-mono">
+                <span className="font-bold text-[#8A6830]">
+                  {item.stampLabel || "SECURED"}
                 </span>
-                <h4 className="font-serif font-black text-[11px] text-[#1a1008] uppercase mt-1 leading-tight">
-                  {item.title}
-                </h4>
-                <p className="font-mono text-[8px] text-[#4a3b2c] mt-1 line-clamp-2">
-                  {item.summary}
-                </p>
+                <span className={isExamined ? "text-emerald-700 font-bold" : "text-neutral-400"}>
+                  {isExamined ? "EXAMINED" : "UNEXAMINED"}
+                </span>
               </div>
-            )}
+            </div>
           </motion.div>
         );
       })}
 
-      {/* ── 3. NEON STICKY NOTES ── */}
-      {/* Yellow Sticky */}
-      <motion.div
-        drag
-        dragConstraints={boardRef}
-        dragElastic={0.08}
-        dragMomentum={false}
-        className="absolute w-[120px] h-[120px] bg-[#fff44f] p-3 rounded-xs shadow-[0_8px_20px_rgba(0,0,0,0.6)] z-20 cursor-grab active:cursor-grabbing rotate-6 flex flex-col justify-center items-center text-center"
-        style={{ left: "76%", top: "42%" }}
-      >
-        <div
-          onClick={(e) => handlePinClick("sticky-1", e)}
-          className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full cursor-pointer z-30 shadow-md"
-          style={{ background: "radial-gradient(circle at 35% 35%, #ff4d4d 0%, #900 100%)" }}
-        />
-        <p className="font-handwriting text-xs text-[#2e2600] font-black leading-tight">
-          ALIBI SHATTERED!<br />Train #4 departed 22:15!
-        </p>
-      </motion.div>
-
-      {/* Coral Sticky */}
-      <motion.div
-        drag
-        dragConstraints={boardRef}
-        dragElastic={0.08}
-        dragMomentum={false}
-        className="absolute w-[120px] h-[120px] bg-[#ff5e62] p-3 rounded-xs shadow-[0_8px_20px_rgba(0,0,0,0.6)] z-20 cursor-grab active:cursor-grabbing -rotate-8 flex flex-col justify-center items-center text-center"
-        style={{ left: "80%", top: "70%" }}
-      >
-        <div
-          onClick={(e) => handlePinClick("sticky-2", e)}
-          className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full cursor-pointer z-30 shadow-md"
-          style={{ background: "radial-gradient(circle at 35% 35%, #ff4d4d 0%, #900 100%)" }}
-        />
-        <p className="font-handwriting text-xs text-[#2b0204] font-black leading-tight">
-          MOTIVE:<br />Missing 1978 Ledger!
-        </p>
-      </motion.div>
-
-      {/* ── 4. HIDDEN ENCRYPTED EVIDENCE (Unlocked via Terminal) ── */}
-      <AnimatePresence>
-        {isDecryptedNodeUnlocked && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0, rotate: 15 }}
-            animate={{ scale: 1, opacity: 1, rotate: -4 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            drag
-            dragConstraints={boardRef}
-            dragElastic={0.08}
-            className="absolute w-[190px] bg-[#e8dfcf] p-3 rounded-xs border-2 border-red-900 shadow-[0_12px_28px_rgba(0,0,0,0.85)] z-25 cursor-grab active:cursor-grabbing"
-            style={{ left: "38%", top: "58%" }}
-            onDoubleClick={() =>
-              setInspectedItem({
-                type: "decrypted",
-                data: {
-                  title: "DECRYPTED WIRETAP INTERCEPT",
-                  description:
-                    "Transcript recorded at 23:42 from Phone Booth 09: 'The package is secured in the 4th floor incinerator. Eliminate the coroner.'",
-                },
-              })
-            }
-          >
-            <div
-              onClick={(e) => handlePinClick("node-decrypted", e)}
-              className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full cursor-pointer z-30 shadow-md"
-              style={{ background: "radial-gradient(circle at 35% 35%, #ff4d4d 0%, #900 100%)" }}
-            />
-            <div className="flex justify-between items-center text-[8px] font-mono font-black text-red-950 border-b border-red-900/60 pb-1">
-              <span>[DECRYPTED INTEL]</span>
-              <span>WIRETAP #9</span>
-            </div>
-            <p className="font-mono text-[9px] font-black text-red-950 mt-1.5 leading-snug">
-              "Eliminate the coroner before dawn."
-            </p>
-            <div className="mt-2 text-right">
-              <span className="border border-green-800 text-green-800 font-mono font-black text-[8px] px-1.5 py-0.5 uppercase">
-                VERIFIED AUDIO
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── 5. ENCRYPTED TERMINAL BOX (Bottom Right CRT Window) ── */}
-      <div className="absolute bottom-16 right-4 w-[280px] md:w-[320px] h-[190px] bg-[#080a08] border border-[#224422] rounded-xs shadow-[0_10px_30px_rgba(0,0,0,0.9),0_0_12px_rgba(34,187,34,0.15)] z-30 flex flex-col overflow-hidden font-mono">
-        <div className="bg-[#112211] px-2.5 py-1 text-[10px] text-[#44dd44] flex justify-between items-center border-b border-[#224422]">
-          <span>FORENSIC_TERMINAL v4.19</span>
-          <span className="animate-pulse">● ONLINE</span>
-        </div>
-        <div className="flex-1 p-2 text-[#33ff33] text-[10.5px] overflow-y-auto flex flex-col justify-end space-y-1">
-          {terminalLogs.slice(-4).map((log, i) => (
-            <div key={i} className="leading-tight break-all">
-              {log}
-            </div>
-          ))}
-          <form onSubmit={handleTerminalSubmit} className="flex items-center gap-1.5 pt-1 border-t border-[#1a331a]">
-            <span className="text-[#44dd44] font-black">&gt;</span>
-            <input
-              type="text"
-              value={terminalInput}
-              onChange={(e) => setTerminalInput(e.target.value)}
-              placeholder="Enter passcode (try: 1978)"
-              className="w-full bg-transparent text-[#33ff33] text-[11px] outline-none placeholder-[#225522] caret-[#33ff33]"
-            />
-          </form>
-        </div>
-      </div>
-
-      {/* Forensic Tool Dock at bottom */}
+      {/* Forensic Tool Dock (UV blacklight, magnifier, tape recorder) */}
       <div className="absolute bottom-3 left-4 z-20">
         <ForensicToolDock />
       </div>
 
-      {/* ── 6. INSPECTION MODE (LIGHTBOX ZOOM MODAL) ── */}
+      {/* ── Evidence Inspection Lightbox Modal ── */}
       <AnimatePresence>
         {inspectedItem && (
           <motion.div
@@ -586,35 +414,69 @@ export default function EvidenceBoard() {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md cursor-pointer"
           >
             <motion.div
-              initial={{ scale: 0.75, rotate: -2 }}
-              animate={{ scale: 1.3, rotate: 0 }}
-              exit={{ scale: 0.75, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+              initial={{ scale: 0.85, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="max-w-md w-full bg-[#EDE8D5] text-[#1A1817] p-6 rounded-sm shadow-[0_30px_90px_rgba(0,0,0,0.95)] border-4 border-[#2A1808] cursor-default"
+              className="max-w-lg w-full bg-[#EDE8D5] text-[#1A1817] p-6 md:p-8 rounded-sm shadow-[0_30px_90px_rgba(0,0,0,0.95)] border-4 border-[#2A1808] cursor-default"
             >
-              <div className="flex justify-between items-start border-b-2 border-[#1A1817] pb-2 mb-3">
+              <div className="flex justify-between items-start border-b-2 border-[#1A1817] pb-3 mb-4">
                 <div>
-                  <span className="font-mono text-[9px] font-black tracking-widest text-[#7A0C0C] bg-red-100 px-2 py-0.5 border border-red-300 uppercase">
-                    FORENSIC ARCHIVE INSPECTION
+                  <span className="font-mono text-[9px] font-black tracking-widest text-[#8B0000] uppercase">
+                    FORENSIC EXAMINATION
                   </span>
-                  <h3 className="font-serif text-xl font-black mt-1 uppercase tracking-wide text-[#1A1817]">
-                    {inspectedItem.data.name || inspectedItem.data.title}
+                  <h3 className="font-serif text-xl md:text-2xl font-bold uppercase tracking-wide text-[#1A1817] mt-0.5">
+                    {inspectedItem.data.name || inspectedItem.data.title || inspectedItem.data.label}
                   </h3>
                 </div>
                 <button
                   onClick={() => setInspectedItem(null)}
-                  className="font-mono text-[10px] font-black bg-[#2A1808] text-[#EDE8D5] px-2 py-0.5 rounded hover:bg-red-900 transition-colors"
+                  className="font-mono text-xs font-bold bg-[#2A1808] text-[#EDE8D5] px-2.5 py-1 rounded hover:bg-red-900 transition-colors cursor-pointer"
                 >
                   ✕ ESC
                 </button>
               </div>
-              <p className="font-mono text-xs text-[#2b180d] leading-relaxed">
-                {inspectedItem.data.description || inspectedItem.data.motive || inspectedItem.data.alibi}
-              </p>
-              <div className="mt-4 pt-2 border-t border-[#1A1817]/30 flex justify-between items-center text-[8.5px] font-mono text-neutral-600 font-bold">
-                <span>VERITAS MORTIS LAB ARCHIVE</span>
-                <span>CLICK OUTSIDE TO CLOSE</span>
+
+              <div className="space-y-3 font-mono text-xs text-neutral-800 leading-relaxed">
+                <div className="p-3 bg-white/70 border border-neutral-300 rounded-sm">
+                  <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">
+                    Analysis Report:
+                  </span>
+                  <p>
+                    {inspectedItem.data.fullForensicAnalysis ||
+                      inspectedItem.data.fullAnalysis ||
+                      inspectedItem.data.description ||
+                      inspectedItem.data.alibiStatement}
+                  </p>
+                </div>
+
+                {inspectedItem.data.hiddenUVDetails && (
+                  <div className="p-3 bg-purple-100 border border-purple-300 rounded-sm text-purple-950 font-bold">
+                    <span className="text-[9px] uppercase tracking-widest block mb-0.5">
+                      365nm UV Luminescence Finding:
+                    </span>
+                    <p>{inspectedItem.data.hiddenUVDetails}</p>
+                  </div>
+                )}
+
+                {inspectedItem.data.audioTranscript && (
+                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-amber-950">
+                    <span className="text-[9px] font-bold uppercase tracking-widest block mb-0.5">
+                      Switchboard Audio Transcript:
+                    </span>
+                    <p className="whitespace-pre-wrap italic">{inspectedItem.data.audioTranscript}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-[#1A1817]/20 flex justify-between items-center text-[9px] font-mono text-neutral-600">
+                <span>VERITAS MORTIS CRIME ARCHIVE</span>
+                <button
+                  onClick={() => setInspectedItem(null)}
+                  className="font-bold text-[#8B0000] hover:underline"
+                >
+                  Close Inspection →
+                </button>
               </div>
             </motion.div>
           </motion.div>

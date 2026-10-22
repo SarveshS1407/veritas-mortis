@@ -1,5 +1,5 @@
-import { generateCase } from "@/lib/proceduralGenerator";
-import type { CaseGraph, SuspectArchetype, EvidenceNode } from "@/types/caseEngine";
+import { generateCase } from "../src/lib/proceduralGenerator.ts";
+import type { CaseGraph, SuspectArchetype, EvidenceNode } from "../src/types/caseEngine.ts";
 
 /**
  * VERITAS MORTIS — AUTOMATED THRILLER ENGINE INTEGRITY TEST SUITE

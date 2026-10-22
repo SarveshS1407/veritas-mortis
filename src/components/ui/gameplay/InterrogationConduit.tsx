@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCaseStore } from "@/lib/useCaseStore";
+import { forensicAudio } from "@/lib/forensicAudio";
+import { EvidenceNode } from "@/types/case";
 
 export default function InterrogationConduit() {
   const currentCase = useCaseStore((s) => s.currentCase);
@@ -13,268 +15,285 @@ export default function InterrogationConduit() {
   const setActiveSuspect = useCaseStore((s) => s.setActiveSuspect);
   const setActiveEvidence = useCaseStore((s) => s.setActiveEvidence);
   const examineEvidence = useCaseStore((s) => s.examineEvidence);
+  const recordPlayerChoice = useCaseStore((s) => s.recordPlayerChoice);
+  const playerChoices = useCaseStore((s) => s.playerChoices);
 
   const [showEvidenceSelector, setShowEvidenceSelector] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll transcript to bottom
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [interrogationLog]);
 
   if (!currentCase) return null;
 
-  const suspect = currentCase.suspects.find((s) => s.id === activeSuspectId);
-  const activeEvidence = currentCase.evidence.find((e) => e.id === activeEvidenceId);
-  const examinedEvidence = currentCase.evidence.filter(
+  const evidenceList: EvidenceNode[] = currentCase.evidenceNodes || currentCase.evidence || [];
+  const suspect = currentCase.suspects.find((s) => s.id === activeSuspectId) || currentCase.suspects[0];
+  const activeEvidence = evidenceList.find((e) => e.id === activeEvidenceId);
+  const examinedEvidence = evidenceList.filter(
     (e) => e.status === "examined" || e.status === "analyzed"
   );
 
-  // Entries for this suspect only
-  const suspectLog = interrogationLog.filter((e) => e.suspectId === activeSuspectId);
+  const suspectLog = interrogationLog.filter((e) => e.suspectId === suspect?.id);
 
   const handleAction = async (action: string, evidenceId?: string) => {
     if (!suspect || isProcessing) return;
     setIsProcessing(true);
+    forensicAudio.playTypewriterKey();
     await interrogateSuspect(suspect.id, action, evidenceId);
     setIsProcessing(false);
     setShowEvidenceSelector(false);
   };
 
-  const getStatusColor = (level: string) => {
+  const getStatusColor = (level: string = "CALM") => {
     switch (level) {
-      case "CALM": return "text-green-500";
-      case "DEFLECTING": return "text-yellow-500";
-      case "CORNERED": return "text-orange-500";
-      case "BROKEN": return "text-red-500 animate-pulse";
-      default: return "text-zinc-500";
+      case "CALM":
+        return "text-emerald-400 border-emerald-500 bg-emerald-950/40";
+      case "DEFLECTING":
+        return "text-amber-400 border-amber-500 bg-amber-950/40";
+      case "CORNERED":
+        return "text-orange-400 border-orange-500 bg-orange-950/40";
+      case "BROKEN":
+        return "text-red-500 border-red-500 bg-red-950/50 animate-pulse";
+      default:
+        return "text-zinc-400 border-zinc-700 bg-zinc-900";
     }
   };
 
-  const getBarGradient = (composure: number) => {
-    if (composure > 70) return "from-green-800 to-green-700";
-    if (composure > 40) return "from-yellow-700 to-yellow-600";
-    if (composure > 15) return "from-orange-700 to-orange-600";
-    return "from-red-800 to-red-700";
+  const getBarGradient = (stress: number = 20) => {
+    if (stress < 30) return "from-emerald-700 to-emerald-500";
+    if (stress < 60) return "from-amber-600 to-amber-500";
+    if (stress < 85) return "from-orange-600 to-orange-500";
+    return "from-red-700 to-red-500";
   };
 
-  // ── MODE A: INTERROGATION ──
-  if (suspect) {
-    return (
-      <div className="w-full h-full bg-pitch flex flex-col border-l border-zinc-800/50 font-mono text-bone overflow-hidden">
-        {/* Header: Suspect Info + Composure */}
-        <div className="p-5 border-b border-zinc-800 bg-charcoal/40 flex-shrink-0">
-          <div className="flex items-center justify-between mb-3">
+  return (
+    <div className="w-full h-full bg-[#080808] flex flex-col border-l border-zinc-800/80 font-mono text-[#E8E3D9] overflow-hidden select-none">
+      {/* ── Suspect Selector Tabs ── */}
+      <div className="flex border-b border-zinc-800 bg-[#121010] flex-shrink-0">
+        {currentCase.suspects.map((s, idx) => {
+          const isActive = s.id === suspect?.id;
+          return (
+            <button
+              key={s.id}
+              onClick={() => {
+                forensicAudio.playPhotoInspect();
+                setActiveSuspect(s.id);
+              }}
+              className={`flex-1 py-2.5 px-3 text-left transition-colors cursor-pointer border-r border-zinc-800 flex items-center justify-between ${
+                isActive
+                  ? "bg-[#1A1714] border-b-2 border-b-[#8B0000] text-[#E8E3D9]"
+                  : "text-neutral-500 hover:text-neutral-300 hover:bg-[#160F0B]"
+              }`}
+            >
+              <div className="truncate">
+                <span className="text-[8px] uppercase tracking-widest text-[#8A6830] block">
+                  SUSPECT 0{idx + 1}
+                </span>
+                <span className="text-xs font-serif font-bold uppercase truncate">
+                  {s.name}
+                </span>
+              </div>
+              <span className={`text-[8px] px-1.5 py-0.5 border rounded-sm font-bold ${getStatusColor(s.composureLevel || (s.composure as string))}`}>
+                {s.composureLevel || (s.composure as string) || "CALM"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Suspect Header & Composure Gauge ── */}
+      {suspect && (
+        <div className="p-4 md:p-5 border-b border-zinc-800 bg-[#14100D]/80 flex-shrink-0">
+          <div className="flex items-center justify-between mb-2">
             <div>
-              <h2 className="font-serif text-3xl text-parchment tracking-tight uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+              <h2 className="font-serif text-2xl md:text-3xl text-[#EDE8D5] tracking-tight uppercase drop-shadow-md">
                 {suspect.name}
               </h2>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">
-                {suspect.role} · INTERROGATION #{suspect.interrogationCount + 1}
+              <p className="text-[10px] text-neutral-400 uppercase tracking-widest mt-0.5">
+                {suspect.occupation || suspect.role} · {suspect.age || 40} YEARS OLD · COMPOSURE PROTOCOL
               </p>
             </div>
-            <span className={`text-xs font-bold tracking-widest ${getStatusColor(suspect.composureLevel)}`}>
-              [{suspect.composureLevel}]
+            <div className="text-right">
+              <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 border rounded-sm ${getStatusColor(suspect.composureLevel || (suspect.composure as string))}`}>
+                [{suspect.composureLevel || (suspect.composure as string) || "CALM"}]
+              </span>
+            </div>
+          </div>
+
+          {/* Stress / Composure Gauge */}
+          <div className="mt-3 flex items-center gap-3">
+            <span className="text-[9px] uppercase tracking-widest text-neutral-400 w-24">
+              PULSE / STRESS
+            </span>
+            <div className="flex-1 h-2.5 bg-black border border-neutral-700 relative overflow-hidden rounded-sm">
+              <motion.div
+                className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getBarGradient(
+                  suspect.stressLevel || 20
+                )}`}
+                animate={{ width: `${Math.min(100, Math.max(10, suspect.stressLevel || 20))}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </div>
+            <span className="text-[10px] text-neutral-300 w-10 text-right font-bold">
+              {suspect.stressLevel || 20}/100
             </span>
           </div>
 
-          {/* Composure Gauge */}
-          <div className="flex items-center gap-3">
-            <span className="text-[9px] uppercase tracking-widest text-zinc-600 w-20">Composure</span>
-            <div className="flex-1 h-2.5 bg-black border border-zinc-700 relative overflow-hidden rounded-sm">
-              <motion.div
-                className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getBarGradient(suspect.composure)}`}
-                animate={{ width: `${suspect.composure}%` }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-              />
-            </div>
-            <span className="text-[10px] text-zinc-400 w-8 text-right">{suspect.composure}%</span>
-          </div>
-
-          {/* Body Language Cue */}
-          <div className="mt-3 p-2.5 bg-black/50 border border-zinc-800 rounded-sm">
-            <p className="italic text-zinc-400 text-xs leading-relaxed">
-              {suspect.bodyLanguageCues[suspect.composureLevel]}
+          {/* Dynamic Body Language Cue */}
+          <div className="mt-3 p-2 bg-black/60 border border-neutral-800 rounded-sm">
+            <p className="italic text-neutral-300 text-xs leading-relaxed">
+              {suspect.bodyLanguageCues?.[(suspect.composureLevel as any) || "CALM"] ||
+                "*[Maintains guarded silence across the interrogation table]*"}
             </p>
           </div>
         </div>
+      )}
 
-        {/* Transcript Area */}
-        <div className="flex-1 p-5 overflow-y-auto flex flex-col gap-3 bg-[#080808]">
-          {suspectLog.length === 0 && (
-            <p className="text-zinc-700 text-xs text-center uppercase tracking-widest mt-12">
-              Begin questioning the suspect
+      {/* ── Interrogation Transcript Area ── */}
+      <div className="flex-1 p-4 md:p-5 overflow-y-auto flex flex-col gap-3 bg-[#0A0A0A]">
+        {suspectLog.length === 0 && (
+          <div className="text-center my-auto py-8">
+            <span className="text-[10px] uppercase tracking-widest text-neutral-600 block mb-1">
+              [ PRECINCT INTERROGATION RECORD OPEN ]
+            </span>
+            <p className="text-xs text-neutral-500 font-serif italic max-w-sm mx-auto">
+              "{suspect?.alibiStatement || "I was elsewhere when the incident occurred."}"
             </p>
-          )}
-          {suspectLog.map((entry) => (
-            <div key={entry.id} className="space-y-2">
-              {/* Player action */}
-              <div className="text-right">
-                <span className="text-[9px] text-zinc-600 block mb-0.5">DETECTIVE</span>
-                <p className="text-sm text-bone inline-block bg-zinc-900/60 px-3 py-2 rounded-sm border border-zinc-800 max-w-[85%]">
-                  {entry.playerAction}
-                  {entry.evidenceUsed && (
-                    <span className="block text-[9px] text-amber-600 mt-1 uppercase">
-                      [EVIDENCE PRESENTED: {currentCase.evidence.find((e) => e.id === entry.evidenceUsed)?.title}]
-                    </span>
-                  )}
-                </p>
-              </div>
-              {/* Suspect response */}
-              <div>
-                <span className="text-[9px] text-zinc-600 block mb-0.5">
-                  {suspect.name.split(" ").pop()?.toUpperCase()}
-                </span>
-                <p className="text-sm text-parchment border-l-2 border-zinc-800 pl-3 max-w-[85%] leading-relaxed">
-                  &ldquo;{entry.suspectResponse}&rdquo;
-                </p>
-                {entry.composureDelta !== 0 && (
-                  <span className="text-[9px] text-red-700 mt-1 block">
-                    [COMPOSURE {entry.composureDelta > 0 ? "+" : ""}{entry.composureDelta}]
+            <p className="text-[10px] text-[#8A6830] mt-3 uppercase">
+              SELECT AN INTERROGATION ACTION BELOW TO BEGIN QUESTIONING
+            </p>
+          </div>
+        )}
+
+        {suspectLog.map((entry) => (
+          <div key={entry.id} className="space-y-2">
+            {/* Detective Action */}
+            <div className="text-right">
+              <span className="text-[8px] text-neutral-500 uppercase tracking-widest block mb-0.5">
+                LEAD DETECTIVE
+              </span>
+              <div className="text-xs text-[#E8E3D9] inline-block bg-[#161311] px-3 py-2 rounded-sm border border-neutral-700 max-w-[85%] text-left">
+                <span>{entry.playerAction}</span>
+                {entry.evidenceUsed && (
+                  <span className="block text-[9px] text-amber-500 mt-1 uppercase font-bold">
+                    [EVIDENCE CONFRONTED:{" "}
+                    {evidenceList.find((e) => e.id === entry.evidenceUsed)?.title ||
+                      "CASE ARTIFACT"}
+                    ]
                   </span>
                 )}
               </div>
             </div>
-          ))}
-          <div ref={transcriptEndRef} />
-        </div>
 
-        {/* Action Controls */}
-        <div className="p-4 bg-charcoal/60 border-t border-zinc-800 relative flex-shrink-0">
-          {/* Evidence Selector Popup */}
-          <AnimatePresence>
-            {showEvidenceSelector && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute bottom-full left-0 w-full bg-charcoal border border-zinc-700 max-h-48 overflow-y-auto shadow-2xl"
-              >
-                <div className="p-2 text-[10px] text-zinc-400 bg-black/60 uppercase tracking-widest border-b border-zinc-800">
-                  Select Evidence to Present
-                </div>
-                {examinedEvidence.length === 0 && (
-                  <div className="p-3 text-xs text-zinc-600 italic">No evidence examined yet.</div>
-                )}
-                {examinedEvidence.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleAction(`Present evidence: ${item.title}`, item.id)}
-                    className="w-full text-left p-3 hover:bg-zinc-800 text-sm border-b border-zinc-800/50 transition-colors text-zinc-300"
-                  >
-                    <span className="font-bold">{item.title}</span>
-                    <span className="text-[9px] text-zinc-500 ml-2 uppercase">[{item.category}]</span>
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleAction("Where were you on the night in question?")}
-              disabled={isProcessing}
-              className="p-3 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-500 text-[10px] uppercase tracking-widest transition-all disabled:opacity-40"
-            >
-              Question Alibi
-            </button>
-            <button
-              onClick={() => handleAction("You're lying. I can see it in your eyes.")}
-              disabled={isProcessing}
-              className="p-3 bg-zinc-900 border border-zinc-700 hover:bg-red-950/40 hover:border-red-800 text-[10px] uppercase tracking-widest transition-all disabled:opacity-40"
-            >
-              Press Harder
-            </button>
-            <button
-              onClick={() => setShowEvidenceSelector(!showEvidenceSelector)}
-              disabled={isProcessing}
-              className="p-3 bg-zinc-900 border border-zinc-700 hover:bg-amber-950/30 hover:border-amber-800 text-[10px] uppercase tracking-widest transition-all disabled:opacity-40"
-            >
-              Present Evidence
-            </button>
-            <button
-              onClick={() => setActiveSuspect(null)}
-              className="p-3 bg-black border border-zinc-800 hover:bg-zinc-900 text-[10px] uppercase tracking-widest text-zinc-500 transition-all"
-            >
-              End Interrogation
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── MODE B: DOCUMENT INSPECTION ──
-  if (activeEvidence) {
-    return (
-      <div className="w-full h-full bg-pitch flex items-center justify-center p-8 border-l border-zinc-800/50 relative">
-        <button
-          onClick={() => setActiveEvidence(null)}
-          className="absolute top-6 right-6 p-2 bg-charcoal border border-zinc-700 hover:bg-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-400 z-10"
-        >
-          Return to Board
-        </button>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-xl bg-parchment p-10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative"
-        >
-          {/* Stamp */}
-          {activeEvidence.stampLabel && (
-            <div className="absolute top-8 right-8 -rotate-12 border-4 border-red-800 text-red-800 font-mono text-lg font-bold p-2 opacity-75 mix-blend-multiply pointer-events-none">
-              {activeEvidence.stampLabel}
-            </div>
-          )}
-
-          <div className="border-b-2 border-ink/20 pb-4 mb-6">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-ink/50 block mb-2">
-              CATEGORY: {activeEvidence.category.toUpperCase()}
-            </span>
-            <h2 className="font-serif text-2xl font-bold text-ink uppercase">
-              {activeEvidence.title}
-            </h2>
-          </div>
-
-          <div className="font-mono text-sm leading-relaxed text-ink/80 mb-6">
-            {activeEvidence.summary}
-          </div>
-
-          <div className="bg-ink/5 p-4 border-l-4 border-ink/30 font-serif text-sm text-ink/70 leading-relaxed whitespace-pre-wrap">
-            {activeEvidence.fullAnalysis}
-          </div>
-
-          <div className="mt-6 flex gap-2">
-            {activeEvidence.implicates.length > 0 && (
-              <span className="text-[9px] font-mono text-red-800 bg-red-100 px-2 py-0.5 uppercase">
-                IMPLICATES: {activeEvidence.implicates.join(", ")}
+            {/* Suspect Response */}
+            <div className="text-left">
+              <span className="text-[8px] text-neutral-500 uppercase tracking-widest block mb-0.5">
+                {suspect?.name.toUpperCase()}
               </span>
-            )}
+              <div className="text-xs text-[#D4C5A9] border-l-2 border-[#8B0000] pl-3 py-1 max-w-[88%] leading-relaxed bg-[#120F0D]/40">
+                “{entry.suspectResponse}”
+              </div>
+              {entry.composureDelta !== 0 && (
+                <span className="text-[9px] text-[#8B0000] mt-1 block font-bold">
+                  [STRESS +{entry.composureDelta} · COMPOSURE IMPACTED]
+                </span>
+              )}
+            </div>
           </div>
-        </motion.div>
+        ))}
+        <div ref={transcriptEndRef} />
       </div>
-    );
-  }
 
-  // ── MODE C: EMPTY STATE ──
-  return (
-    <div className="w-full h-full bg-pitch flex items-center justify-center border-l border-zinc-800/50 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-5 mix-blend-overlay pointer-events-none">
-        <svg viewBox="0 0 200 200" className="w-full h-full">
-          <filter id="conduit-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#conduit-grain)" />
-        </svg>
-      </div>
-      <div className="text-center">
-        <p className="font-mono text-zinc-700 text-sm tracking-[0.2em] uppercase animate-pulse">
-          Select a suspect or evidence item
-        </p>
-        <p className="font-mono text-zinc-800 text-xs tracking-widest uppercase mt-1">
-          from the board
-        </p>
+      {/* ── Interrogation Controls ── */}
+      <div className="p-3 md:p-4 bg-[#121010] border-t border-zinc-800 relative flex-shrink-0">
+        {/* Evidence Selection Dropdown Modal */}
+        <AnimatePresence>
+          {showEvidenceSelector && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-full left-4 right-4 mb-2 p-4 bg-[#160F0B] border-2 border-[#5C4A38] rounded-sm shadow-2xl z-30 max-h-56 overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-2 pb-2 border-b border-zinc-700">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4C5A9]">
+                  CONFRONT WITH EXAMINED EVIDENCE
+                </span>
+                <button
+                  onClick={() => setShowEvidenceSelector(false)}
+                  className="text-neutral-400 hover:text-white text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {examinedEvidence.length === 0 ? (
+                <p className="text-[10px] text-neutral-500 py-3 text-center">
+                  Examine evidence cards on the corkboard first before presenting them to suspects.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {examinedEvidence.map((ev) => (
+                    <button
+                      key={ev.id}
+                      onClick={() =>
+                        handleAction(
+                          `"I have this in my possession: ${ev.title}. Explain how your name is connected."`,
+                          ev.id
+                        )
+                      }
+                      className="p-2 bg-[#1A1714] hover:bg-[#2A201A] border border-neutral-700 hover:border-[#8B0000] text-left text-[10px] rounded-sm transition-colors cursor-pointer truncate"
+                    >
+                      <span className="text-[#8B0000] font-bold block">{ev.type}</span>
+                      <span className="text-neutral-200 font-bold truncate block">{ev.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Action Button Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* Action 1: Question Alibi */}
+          <button
+            onClick={() => handleAction(`"Walk me through your exact movements during the fatal window again."`)}
+            disabled={isProcessing}
+            className="py-2 px-2.5 bg-[#160F0B] hover:bg-[#221812] border border-[#3B2A1E] hover:border-zinc-500 text-[10px] text-neutral-300 hover:text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-40"
+          >
+            1. Press Alibi
+          </button>
+
+          {/* Action 2: Challenge Hidden Secret */}
+          <button
+            onClick={() => handleAction(`"We found private correspondence referencing offshore accounts and forged documents. What aren't you telling us?"`)}
+            disabled={isProcessing}
+            className="py-2 px-2.5 bg-[#160F0B] hover:bg-[#221812] border border-[#3B2A1E] hover:border-zinc-500 text-[10px] text-neutral-300 hover:text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-40"
+          >
+            2. Challenge Secret
+          </button>
+
+          {/* Action 3: Confront with Evidence */}
+          <button
+            onClick={() => setShowEvidenceSelector(!showEvidenceSelector)}
+            disabled={isProcessing}
+            className="py-2 px-2.5 bg-[#1C120C] hover:bg-[#2A180E] border border-[#8A6830] text-[10px] text-[#EDE8D5] uppercase tracking-wider rounded-sm transition-colors cursor-pointer font-bold disabled:opacity-40"
+          >
+            3. Present Clue
+          </button>
+
+          {/* Action 4: Final Confrontation */}
+          <button
+            onClick={() => handleAction(`"The forensic evidence is airtight. Step forward and confess before the indictment is delivered to the prosecutor."`)}
+            disabled={isProcessing}
+            className="py-2 px-2.5 bg-[#2A0808] hover:bg-[#400B0B] border border-[#8B0000] text-[10px] text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer font-bold disabled:opacity-40"
+          >
+            4. Force Breakdown
+          </button>
+        </div>
       </div>
     </div>
   );
