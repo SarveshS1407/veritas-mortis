@@ -18,6 +18,10 @@ export interface StoredCaseState {
   activeForensicTool: string;
   hasCompletedIntroGuide: boolean;
   playerChoices: Record<string, string>;
+  currentLocationId?: string;
+  notebookNotes?: any[];
+  suspectTrust?: Record<string, number>;
+  suspectHostility?: Record<string, number>;
   lastSavedAt: string;
 }
 

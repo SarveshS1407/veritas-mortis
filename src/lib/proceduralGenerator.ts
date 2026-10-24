@@ -8,6 +8,9 @@ import type {
   ActPhase,
   ComposureLevel,
   EvidenceType,
+  InvestigationLocation,
+  LocationHotspot,
+  NotebookNote,
 } from "../types/caseEngine.ts";
 
 // Deterministic Mulberry32 PRNG
@@ -1064,6 +1067,243 @@ export function generateCase(seed?: number): CaseGraph {
     fullCrimeNarrative: `THE TRUTH OF CASE #${caseSeed}: ${culpritTemplate.name} committed the homicide using ${selectedWeapon.label} driven by ${primaryMotive}.`
   };
 
+  // 8. Dynamic Thematic Locations & Interactive Hotspots
+  const locations: InvestigationLocation[] = [
+    {
+      id: "crime_scene",
+      name: theme.setting,
+      subtitle: "PRIMARY HOMICIDE SCENE",
+      description: `The designated murder scene inside ${theme.setting}. Blood patterns, chalk markings, and evidence markers #1 through #4 cover the damp floor.`,
+      atmosphereTone: "Disturbed atmosphere. Dust motes hang suspended in the beam of crime scene flashlights.",
+      unlockedInAct: "act1_hook",
+      isLocked: false,
+      hotspots: [
+        {
+          id: "hs_body_chalk",
+          label: "Chalk Outline & Blood Pool",
+          coordinates: { x: 38, y: 55 },
+          type: "biological",
+          icon: "🩸",
+          description: `Chalk outline marking where ${victimData.name} was discovered. Lividity indicates victim was bludgeoned/poisoned and collapsed immediately.`,
+          isExamined: true,
+          unlockedEvidenceId: "ev_autopsy_prelim",
+          discoveredClueText: `Blood spatter trajectories indicate a close-range surprise confrontation.`
+        },
+        {
+          id: "hs_murder_weapon",
+          label: selectedWeapon.label,
+          coordinates: { x: 62, y: 68 },
+          type: "examine",
+          icon: "🔍",
+          description: `Discovered discarded near the scene: ${selectedWeapon.label}. ${selectedWeapon.desc}`,
+          isExamined: false,
+          unlockedEvidenceId: selectedWeapon.id,
+          discoveredClueText: `Chemical residue and latent prints recovered from the grip surface.`
+        },
+        {
+          id: "hs_staged_alibi_clue",
+          label: "Discarded Transport Slip & Clock",
+          coordinates: { x: 74, y: 38 },
+          type: "document",
+          icon: "📄",
+          description: `A crumpled receipt and altered desk timepiece found near the point of exit, pointing directly toward ${redHerringTemplate.name}.`,
+          isExamined: false,
+          unlockedEvidenceId: clueIdContradictRedHerring,
+          discoveredClueText: `The timestamp appears strangely deliberate—almost staged to catch an investigator's eye.`
+        },
+        {
+          id: "hs_uv_latent_door",
+          label: "Door Frame & Latent Smears",
+          coordinates: { x: 22, y: 30 },
+          type: "uv_scan",
+          icon: "🔦",
+          description: `Surface around the lock latch. Invisible in ambient light; glows vivid luminescent blue under 365nm UV excitation.`,
+          isExamined: false,
+          unlockedEvidenceId: clueIdUVHidden,
+          discoveredClueText: `Latent fingerprint whorls matching Culprit ID #${culpritId}.`
+        }
+      ]
+    },
+    {
+      id: "victim_residence",
+      name: `${victimData.name}'s Residence & Private Study`,
+      subtitle: "DECEDENT'S RESIDENCE & SANCTUM",
+      description: `A grand mahogany-paneled sanctum reeking of cigar smoke and expensive Scotch. Desk drawers have been methodically searched.`,
+      atmosphereTone: "A suffocating stillness. Heavy velvet curtains block the streetlights.",
+      unlockedInAct: "act1_hook",
+      isLocked: false,
+      hotspots: [
+        {
+          id: "hs_desk_secret_ledger",
+          label: "Ransacked Desk Bureau",
+          coordinates: { x: 45, y: 50 },
+          type: "document",
+          icon: "📁",
+          description: `Hidden false-bottom compartment reveals encrypted transaction slips and financial records.`,
+          isExamined: false,
+          unlockedEvidenceId: clueIdContradictAccomplice,
+          discoveredClueText: `Ledger documents systematic fraud and unauthorized asset transfers.`
+        },
+        {
+          id: "hs_victim_correspondence",
+          label: "Personal Letterpress & Threat Notes",
+          coordinates: { x: 68, y: 42 },
+          type: "examine",
+          icon: "✉️",
+          description: `Correspondence from ${victimData.name} threatening to disinherit or expose associates before dawn.`,
+          isExamined: false,
+          discoveredClueText: `The victim knew their life was in imminent danger from someone within their trusted circle.`
+        }
+      ]
+    },
+    {
+      id: "forensic_lab",
+      name: "County Morgue & Forensic Laboratory",
+      subtitle: "OFFICE OF THE CHIEF MEDICAL EXAMINER",
+      description: `Cold stainless-steel autopsy tables, formaldehyde vapor, and buzzing spectrophotometer cathode tubes.`,
+      atmosphereTone: "Clinical, chilling silence broken only by the hum of the refrigeration units.",
+      unlockedInAct: "act1_hook",
+      isLocked: false,
+      hotspots: [
+        {
+          id: "hs_coroner_table",
+          label: "Examination Slab: Decedent Post-Mortem",
+          coordinates: { x: 50, y: 55 },
+          type: "biological",
+          icon: "🔬",
+          description: `Detailed anatomical pathology of ${victimData.name}. ${victimData.primaryInjury}`,
+          isExamined: true,
+          unlockedEvidenceId: "ev_crime_scene_photo",
+          discoveredClueText: `Gastric contents confirm fatal ingestion occurred at ${victimData.timeOfDeath}.`
+        },
+        {
+          id: "hs_toxicology_reversal",
+          label: "Chromatography Spectrometer & Reversal Card",
+          coordinates: { x: 78, y: 35 },
+          type: "biological",
+          icon: "🧪",
+          description: `Analytical serum assay demonstrating that the initial timeframe was fabricated, exonerating ${redHerringTemplate.name}.`,
+          isExamined: false,
+          unlockedEvidenceId: clueIdReversal,
+          discoveredClueText: `Toxicology findings directly shatter the prosecution's initial theory against ${redHerringTemplate.name}!`
+        }
+      ]
+    },
+    {
+      id: "police_archive",
+      name: "Precinct Records Vault & Telephony Bureau",
+      subtitle: "HOMICIDE DIVISION ARCHIVE",
+      description: `Steel filing bays, dusty teletype rolls, and switchboard interception tape-recording consoles.`,
+      atmosphereTone: "Cigarette haze beneath flickering amber fluorescent bulbs.",
+      unlockedInAct: "act1_hook",
+      isLocked: false,
+      hotspots: [
+        {
+          id: "hs_wiretap_tape_deck",
+          label: "Magnetic Reel Player: Wiretap Telephony",
+          coordinates: { x: 35, y: 48 },
+          type: "audio",
+          icon: "🎙️",
+          description: `Reel-to-reel magnetic tape intercepting a clandestine conversation recorded hours before the homicide.`,
+          isExamined: false,
+          unlockedEvidenceId: clueIdWiretap,
+          discoveredClueText: `Voices explicitly coordinate the suppression of evidence and distraction of staff.`
+        },
+        {
+          id: "hs_suspect_criminal_dossiers",
+          label: "Confidential Background Folders",
+          coordinates: { x: 65, y: 58 },
+          type: "document",
+          icon: "🗄️",
+          description: `Classified intelligence dossiers for ${suspects.map(s => s.name).join(", ")}.`,
+          isExamined: true,
+          discoveredClueText: `Reveals hidden business ties, undisclosed debts, and prior aliases.`
+        }
+      ]
+    },
+    {
+      id: "interrogation_room",
+      name: "Precinct Interrogation Room 4",
+      subtitle: "CONFRONTATION & COMPOSURE CONDUIT",
+      description: `Cinderblock cell, single metal desk, two-way observation mirror, and blinding 200W overhead spotlight.`,
+      atmosphereTone: "Oppressive claustrophobia. Heartbeat audio echoes off bare concrete.",
+      unlockedInAct: "act1_hook",
+      isLocked: false,
+      hotspots: [
+        {
+          id: "hs_interrogation_seat",
+          label: "Suspect Interrogation Seat",
+          coordinates: { x: 50, y: 50 },
+          type: "examine",
+          icon: "🪑",
+          description: `Cross-examine detained suspects. Press for alibis, present contradictory evidence, and monitor stress breakdown.`,
+          isExamined: true,
+          discoveredClueText: `Direct psychological conduit active.`
+        }
+      ]
+    },
+    {
+      id: "restricted_site",
+      name: `Restricted Perimeter: Concealed Workshop`,
+      subtitle: "OFF-LIMITS INVESTIGATION PERIMETER",
+      description: `A secluded off-site vault locked with dual-tumbler padlock. Contains chemical assay balances, tools, and correspondence.`,
+      atmosphereTone: "Pungent solvent fumes, shadows in the peripheral vision, immediate sense of danger.",
+      unlockedInAct: "act2_reversal",
+      isLocked: false,
+      unlockCondition: "Unlocked upon discovering the switchboard wiretap in Act II.",
+      hotspots: [
+        {
+          id: "hs_smoking_gun_bench",
+          label: `Smoking Gun: Custom Assay Balance & Tools`,
+          coordinates: { x: 52, y: 52 },
+          type: "examine",
+          icon: "⚖️",
+          description: `The physical instrument linking the culprit directly to the murder weapon and motive: ${theme.smokingGunDetail}`,
+          isExamined: false,
+          unlockedEvidenceId: clueIdContradictCulprit,
+          discoveredClueText: `Irrefutable smoking gun evidence that corners the culprit!`
+        }
+      ]
+    }
+  ];
+
+  // 9. Initial Notebook Facts & Leads
+  const notebookNotes: NotebookNote[] = [
+    {
+      id: "note_1",
+      category: "fact",
+      title: "Homicide Confirmed",
+      text: `${victimData.name} discovered deceased at ${theme.setting}. Fatal strike estimated at ${victimData.timeOfDeath}. Cause: ${victimData.causeOfDeath}.`,
+      timestamp: "23:45 EST",
+      isVerified: true
+    },
+    {
+      id: "note_2",
+      category: "lead",
+      title: "Circumstantial Decoy",
+      text: `Staged transport receipt and initial witness reports cast heavy suspicion on ${redHerringTemplate.name}.`,
+      timestamp: "00:15 EST",
+      associatedSuspectId: redHerringId,
+      isVerified: false
+    },
+    {
+      id: "note_3",
+      category: "contradiction",
+      title: "Timeframe Anomaly",
+      text: `Coroner's lividity window does not align with the timestamp on the recovered travel receipt. Possible frame-up.`,
+      timestamp: "00:30 EST",
+      isVerified: false
+    },
+    {
+      id: "note_4",
+      category: "hypothesis",
+      title: "Inside Conspiracy",
+      text: `The culprit knew the victim's private security routine and had access to internal keys. Focus on close associates.`,
+      timestamp: "00:45 EST",
+      isVerified: false
+    }
+  ];
+
   const caseNumber = `VM-${caseSeed}`;
   const caseTitle = `${theme.titlePrefix} (Case #${caseNumber})`;
 
@@ -1123,6 +1363,8 @@ export function generateCase(seed?: number): CaseGraph {
     },
     secretTruth,
     solution: secretTruth,
+    locations,
+    notebookNotes,
     redStrings: [],
     createdAt: new Date().toISOString()
   };

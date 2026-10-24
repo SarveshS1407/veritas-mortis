@@ -1,38 +1,37 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════
-   VERITAS MORTIS — Global Design Tokens
-   Aesthetic: "Macabre Realism" / "Analog Gothic"
+   VERITAS MORTIS — The Nightmare Redesign Design Tokens
+   Aesthetic: "Brutal Blood-Stained Detective Noir"
    ═══════════════════════════════════════════════════════ */
 
 @theme inline {
-  /* ── Core Palette ── */
-  --color-pitch: #050505;
-  --color-leather: #121010;
-  --color-charcoal: #1A1714;
-  --color-parchment: #D4C5A9;
-  --color-bone: #E8E3D9;
-  --color-crimson: #6B0000;
-  --color-blood: #8B0000;
-  --color-rust: #4A1A1A;
-  --color-ink: #2A2520;
+  /* ── Nightmare Core Palette ── */
+  --color-obsidian: #090909;
+  --color-charcoal: #151313;
+  --color-dried-blood: #570B12;
+  --color-deep-crimson: #9D101D;
+  --color-fresh-blood: #D21F2B;
+  --color-aged-paper: #C3B69C;
+  --color-forensic-green: #75866A;
+  --color-muted-steel: #74777C;
 
-  /* ── AAA Detective Scene Color Tokens ── */
-  --color-walnut-deep: #160F0B;
-  --color-walnut-mid: #201610;
+  /* ── Legacy Mappings & Tonal Nuances ── */
+  --color-pitch: #090909;
+  --color-leather: #151313;
+  --color-parchment: #C3B69C;
+  --color-bone: #E8E3D9;
+  --color-crimson: #9D101D;
+  --color-blood: #D21F2B;
+  --color-rust: #570B12;
+  --color-ink: #1F1B18;
+
+  --color-walnut-deep: #120E0C;
+  --color-walnut-mid: #1C1512;
   --color-umber: #3B2A1E;
-  --color-aged-leather: #4A3018;
-  --color-olive-muted: #2D322B;
-  --color-slate-dark: #282C34;
-  --color-antique-brass: #8A6830;
-  --color-aged-gold: #C9A227;
-  --color-bone-white: #E8E0D0;
-  --color-parchment-warm: #F5EDD8;
-  --color-old-paper: #D2C4B0;
-  --color-gunmetal: #3A3F48;
-  --color-forensic-maroon: #3A0A0A;
-  --color-ink-crimson: #7A0000;
-  --color-dried-blood: #2D1010;
+  --color-aged-leather: #422B18;
+  --color-gunmetal: #74777C;
+  --color-forensic-maroon: #570B12;
 
   --font-horror: var(--font-horror), "Nosifer", cursive;
   --font-serif: var(--font-playfair), "Cinzel", Georgia, serif;
@@ -46,34 +45,34 @@
 
 /* ── Base Layer ── */
 body {
-  background-color: var(--color-pitch);
-  color: var(--color-bone);
+  background-color: var(--color-obsidian);
+  color: var(--color-aged-paper);
   font-family: var(--font-serif);
   cursor: default;
 }
 
 /* ── Selection Highlight ── */
 ::selection {
-  background-color: var(--color-crimson);
-  color: var(--color-bone);
+  background-color: var(--color-deep-crimson);
+  color: #FFFFFF;
 }
 
 /* ── Scrollbar Styling ── */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-pitch);
+  background: var(--color-obsidian);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-rust);
-  border-radius: 3px;
+  background: var(--color-dried-blood);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-crimson);
+  background: var(--color-deep-crimson);
 }
 /* ═══════════════════════════════════════════════════════
    ANIMATIONS — AAA-Quality Effects

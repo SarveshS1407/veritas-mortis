@@ -10,6 +10,8 @@ import AccusationModal from "./AccusationModal";
 import InvestigationDialogueGuide from "./InvestigationDialogueGuide";
 import ActReversalCinematic from "../ActReversalCinematic";
 import SettingsModal from "../SettingsModal";
+import LocationInvestigationView from "./LocationInvestigationView";
+import InvestigationNotebookModal from "./InvestigationNotebookModal";
 
 interface InvestigationWorkspaceProps {
   onBackToMenu?: () => void;
@@ -22,15 +24,27 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
   const generateNewCase = useCaseStore((s) => s.generateNewCase);
   const settings = useCaseStore((s) => s.settings);
   const updateSettings = useCaseStore((s) => s.updateSettings);
+  const workspaceMode = useCaseStore((s) => s.workspaceMode);
+  const setWorkspaceMode = useCaseStore((s) => s.setWorkspaceMode);
+  const isNotebookOpen = useCaseStore((s) => s.isNotebookOpen);
+  const setNotebookOpen = useCaseStore((s) => s.setNotebookOpen);
 
   const [isAccusationOpen, setIsAccusationOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"scene" | "board" | "interrogation" | "split">("scene");
 
   useEffect(() => {
     if (!currentCase && !isLoading) {
       generateNewCase();
     }
   }, [currentCase, isLoading, generateNewCase]);
+
+  // Sync store workspaceMode with local viewMode if updated from child
+  useEffect(() => {
+    if (workspaceMode === "location_investigation") setViewMode("scene");
+    else if (workspaceMode === "evidence_board") setViewMode("board");
+    else if (workspaceMode === "interrogation") setViewMode("interrogation");
+  }, [workspaceMode]);
 
   if (!currentCase) {
     return (
@@ -81,44 +95,114 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
       />
 
       {/* ── TOP BAR CONTROLS HUD ── */}
-      <header className="relative z-40 w-full px-4 py-2.5 bg-[#121010]/95 border-b border-[#2A201A] flex items-center justify-between text-xs font-mono text-[#D4C5A9]/80 backdrop-blur-sm">
-        {/* Left: Precinct Nav */}
-        <div className="flex items-center gap-3">
+      <header className="relative z-40 w-full px-4 py-2.5 bg-[#151313]/95 border-b border-[#570B12] flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[#C3B69C] backdrop-blur-sm">
+        {/* Left: Precinct Nav & View Mode Switcher */}
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           {onBackToMenu && (
             <button
               onClick={() => {
                 forensicAudio.playFolderOpen();
                 onBackToMenu();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1714] border border-[#3B2A1E] hover:border-zinc-500 text-[10px] text-neutral-300 hover:text-white rounded-sm transition-all uppercase tracking-wider cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1512] border border-[#570B12] hover:border-[#D21F2B] text-[10px] text-neutral-300 hover:text-white rounded-sm transition-all uppercase tracking-wider cursor-pointer shadow"
             >
               <span>←</span>
               <span>Precinct Office</span>
             </button>
           )}
 
-          <div className="hidden sm:flex items-center gap-2 text-[10px] text-neutral-400">
-            <span className="w-2 h-2 rounded-full bg-[#8B0000]" />
-            <span className="uppercase font-bold text-[#E8E3D9]">
-              {currentCase.title}
-            </span>
+          {/* Mode Switcher Buttons */}
+          <div className="flex items-center gap-1 bg-[#090909] p-1 rounded-sm border border-zinc-800">
+            <button
+              onClick={() => {
+                forensicAudio.playPaperSlide();
+                setViewMode("scene");
+                setWorkspaceMode("location_investigation");
+              }}
+              className={`px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-sm transition-colors cursor-pointer flex items-center gap-1 ${
+                viewMode === "scene"
+                  ? "bg-[#570B12] text-white shadow"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <span>🗺️</span>
+              <span className="hidden sm:inline">Living Scene</span>
+            </button>
+
+            <button
+              onClick={() => {
+                forensicAudio.playPaperSlide();
+                setViewMode("board");
+                setWorkspaceMode("evidence_board");
+              }}
+              className={`px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-sm transition-colors cursor-pointer flex items-center gap-1 ${
+                viewMode === "board"
+                  ? "bg-[#570B12] text-white shadow"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <span>📌</span>
+              <span className="hidden sm:inline">Evidence Board</span>
+            </button>
+
+            <button
+              onClick={() => {
+                forensicAudio.playTapeBeep();
+                setViewMode("interrogation");
+                setWorkspaceMode("interrogation");
+              }}
+              className={`px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-sm transition-colors cursor-pointer flex items-center gap-1 ${
+                viewMode === "interrogation"
+                  ? "bg-[#570B12] text-white shadow"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <span>🎙️</span>
+              <span className="hidden sm:inline">Interrogation</span>
+            </button>
+
+            <button
+              onClick={() => {
+                forensicAudio.playFolderOpen();
+                setViewMode("split");
+              }}
+              className={`px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-sm transition-colors cursor-pointer flex items-center gap-1 ${
+                viewMode === "split"
+                  ? "bg-[#570B12] text-white shadow"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              <span>⚡</span>
+              <span className="hidden md:inline">Split Console</span>
+            </button>
           </div>
         </div>
 
-        {/* Right: Audio, Settings & Indictment Button */}
-        <div className="flex items-center gap-3">
+        {/* Right: Journal, Audio, Settings & Indictment Button */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* Detective Journal & Hints Button */}
+          <button
+            onClick={() => {
+              setNotebookOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1512] hover:bg-[#2A1E18] border border-[#C3B69C]/40 text-[#C3B69C] hover:text-white text-[10px] uppercase font-bold tracking-wider rounded-sm transition-all cursor-pointer shadow"
+          >
+            <span>📖</span>
+            <span className="hidden sm:inline">Detective Journal & Hints</span>
+          </button>
+
           {/* Quick Mute Toggle */}
           <button
             onClick={() => {
               updateSettings({ isMuted: !settings.isMuted });
             }}
-            className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer text-[10px]"
             title={settings.isMuted ? "Unmute Audio" : "Mute Audio"}
           >
             {settings.isMuted ? (
-              <span className="text-[11px] text-red-500 font-bold">[MUTED]</span>
+              <span className="text-[#D21F2B] font-bold">[MUTED]</span>
             ) : (
-              <span className="text-[11px] text-neutral-300">[AUDIO ON]</span>
+              <span className="text-neutral-400">[AUDIO]</span>
             )}
           </button>
 
@@ -128,7 +212,7 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
               forensicAudio.playPhotoInspect();
               setIsSettingsOpen(true);
             }}
-            className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer text-[11px]"
+            className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer text-[10px]"
             title="Investigator Settings"
           >
             [CONFIG]
@@ -140,10 +224,10 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
               forensicAudio.playStampSlam();
               setIsAccusationOpen(true);
             }}
-            className={`flex items-center gap-1.5 px-4 py-1.5 font-bold uppercase tracking-widest text-[11px] rounded-sm transition-all cursor-pointer shadow-md ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 font-bold uppercase tracking-widest text-[10px] md:text-xs rounded-sm transition-all cursor-pointer shadow-md ${
               currentAct === "act3_climax"
-                ? "bg-[#8B0000] hover:bg-red-800 text-white border border-red-600 shadow-[0_0_20px_rgba(180,0,0,0.6)] animate-pulse"
-                : "bg-[#1C1510] hover:bg-[#2A1E16] text-[#D4C5A9] border border-[#5C4A38]"
+                ? "bg-[#D21F2B] hover:bg-red-700 text-white border border-red-500 shadow-[0_0_20px_rgba(210,31,43,0.7)] animate-pulse"
+                : "bg-[#570B12] hover:bg-[#9D101D] text-[#E8E3D9] border border-[#9D101D]"
             }`}
           >
             <span>⚖️</span>
@@ -152,17 +236,37 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
         </div>
       </header>
 
-      {/* ── TWO-ZONE SPLIT WORKSPACE ── */}
-      <div className="flex-1 flex flex-col md:flex-row w-full relative z-10 min-h-0 overflow-hidden">
-        {/* ZONE 1: Evidence Board (Left 46%) */}
-        <div className="w-full md:w-[48%] h-1/2 md:h-full relative border-b md:border-b-0 md:border-r border-zinc-800">
-          <EvidenceBoard />
-        </div>
+      {/* ── WORKSPACE VIEWPORT ── */}
+      <div className="flex-1 w-full relative z-10 min-h-0 overflow-hidden">
+        {viewMode === "scene" && (
+          <LocationInvestigationView
+            onOpenInterrogation={() => setViewMode("interrogation")}
+            onOpenBoard={() => setViewMode("board")}
+          />
+        )}
 
-        {/* ZONE 2: Interrogation Conduit / Suspect Psychology (Right 54%) */}
-        <div className="w-full md:w-[52%] h-1/2 md:h-full relative">
-          <InterrogationConduit />
-        </div>
+        {viewMode === "board" && (
+          <div className="w-full h-full relative">
+            <EvidenceBoard />
+          </div>
+        )}
+
+        {viewMode === "interrogation" && (
+          <div className="w-full h-full relative">
+            <InterrogationConduit />
+          </div>
+        )}
+
+        {viewMode === "split" && (
+          <div className="w-full h-full flex flex-col md:flex-row relative">
+            <div className="w-full md:w-[48%] h-1/2 md:h-full relative border-b md:border-b-0 md:border-r border-zinc-800">
+              <EvidenceBoard />
+            </div>
+            <div className="w-full md:w-[52%] h-1/2 md:h-full relative">
+              <InterrogationConduit />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── ZONE 3: Bottom Case Progression Dock ── */}
@@ -187,6 +291,12 @@ export default function InvestigationWorkspace({ onBackToMenu }: InvestigationWo
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* ── INVESTIGATION JOURNAL & HINTS MODAL ── */}
+      <InvestigationNotebookModal
+        isOpen={isNotebookOpen}
+        onClose={() => setNotebookOpen(false)}
       />
     </div>
   );

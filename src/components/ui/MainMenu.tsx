@@ -133,17 +133,29 @@ export default function MainMenu({
       <main className="relative z-30 flex-1 flex flex-col md:flex-row items-center justify-between px-6 md:px-16 lg:px-24 py-8 max-w-7xl mx-auto w-full gap-10">
         {/* LEFT COLUMN: Title & Navigation Actions */}
         <div className="flex flex-col items-start w-full md:w-1/2">
-          {/* Wordmark */}
+          {/* Wordmark & Thematic Subtitle */}
           <div className="mb-8 md:mb-10 text-left">
-            <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-[#8B0000] font-bold">
-              DEPARTMENT OF FORENSIC DEDUCTION
-            </span>
-            <h2 className="text-4xl md:text-6xl font-serif font-black tracking-wider uppercase text-[#E8E3D9] mt-1 drop-shadow-md">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-mono text-[9px] uppercase tracking-[0.35em] text-[#D21F2B] font-bold">
+                PRECINCT HOMICIDE ARCHIVE // TOP SECRET
+              </span>
+              <span className="text-[10px] text-zinc-600">·</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-[#74777C] animate-pulse">
+                CASE #{saveInfo?.caseNumber || "VM-CLASSIFIED"}
+              </span>
+            </div>
+
+            <h1 className="text-4xl md:text-6xl font-serif font-black tracking-wider uppercase text-[#E8E3D9] mt-1 drop-shadow-md">
               VERITAS
               <br />
               MORTIS
-            </h2>
-            <div className="h-0.5 w-24 bg-[#6B0000] mt-3" />
+            </h1>
+
+            <p className="font-serif italic text-sm md:text-base text-[#C3B69C] mt-2 tracking-wide">
+              Every truth leaves a body.
+            </p>
+
+            <div className="h-0.5 w-28 bg-[#9D101D] mt-3" />
           </div>
 
           {/* Menu Action List */}
@@ -152,12 +164,12 @@ export default function MainMenu({
             <button
               onClick={() => handleAction(onNewGame, "folder")}
               onMouseEnter={() => forensicAudio.playPenFriction()}
-              className="group relative flex items-center justify-between px-6 py-4 bg-[#121010]/90 hover:bg-[#1C1814] border border-[#3B2A1E] hover:border-[#8B0000] text-left transition-all duration-200 shadow-lg rounded-sm cursor-pointer"
+              className="group relative flex items-center justify-between px-6 py-4 bg-[#151313]/95 hover:bg-[#1E1917] border border-[#570B12] hover:border-[#D21F2B] text-left transition-all duration-200 shadow-xl rounded-sm cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-[#8B0000] group-hover:scale-125 transition-transform" />
+                <span className="w-2 h-2 rounded-full bg-[#D21F2B] group-hover:scale-125 transition-transform" />
                 <div>
-                  <span className="font-mono text-sm tracking-[0.2em] uppercase font-bold text-[#D4C5A9] group-hover:text-white transition-colors">
+                  <span className="font-mono text-sm tracking-[0.2em] uppercase font-bold text-[#C3B69C] group-hover:text-white transition-colors">
                     NEW INVESTIGATION
                   </span>
                   <p className="text-[10px] font-mono text-neutral-500 mt-0.5">
@@ -165,12 +177,12 @@ export default function MainMenu({
                   </p>
                 </div>
               </div>
-              <span className="font-mono text-xs text-[#8B0000] group-hover:translate-x-1.5 transition-transform">
+              <span className="font-mono text-xs text-[#D21F2B] group-hover:translate-x-1.5 transition-transform">
                 →
               </span>
             </button>
 
-            {/* 2. CONTINUE INVESTIGATION */}
+            {/* 2. CONTINUE CASE */}
             <button
               onClick={() => {
                 if (canResume) {
@@ -183,14 +195,14 @@ export default function MainMenu({
               }}
               className={`group relative flex items-center justify-between px-6 py-4 border text-left transition-all duration-200 rounded-sm ${
                 canResume
-                  ? "bg-[#121010]/90 hover:bg-[#1C1814] border-[#5C4A38] hover:border-[#8A6830] cursor-pointer shadow-lg"
-                  : "bg-[#0A0A0A]/60 border-[#1A1714] opacity-45 cursor-not-allowed"
+                  ? "bg-[#151313]/95 hover:bg-[#1E1917] border-[#74777C] hover:border-[#C3B69C] cursor-pointer shadow-xl"
+                  : "bg-[#090909]/60 border-zinc-900 opacity-45 cursor-not-allowed"
               }`}
             >
               <div className="flex items-center gap-3">
                 <span
                   className={`w-2 h-2 rounded-full ${
-                    canResume ? "bg-[#8A6830]" : "bg-neutral-700"
+                    canResume ? "bg-[#75866A]" : "bg-neutral-700"
                   }`}
                 />
                 <div>
@@ -199,7 +211,7 @@ export default function MainMenu({
                       canResume ? "text-[#E8E3D9]" : "text-neutral-500"
                     }`}
                   >
-                    CONTINUE INVESTIGATION
+                    CONTINUE CASE
                   </span>
                   <p className="text-[10px] font-mono text-neutral-500 mt-0.5">
                     {canResume
@@ -209,7 +221,7 @@ export default function MainMenu({
                 </div>
               </div>
               {canResume && (
-                <span className="font-mono text-xs text-[#8A6830] group-hover:translate-x-1.5 transition-transform">
+                <span className="font-mono text-xs text-[#75866A] group-hover:translate-x-1.5 transition-transform">
                   →
                 </span>
               )}

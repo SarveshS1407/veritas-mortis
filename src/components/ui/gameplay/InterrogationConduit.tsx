@@ -257,21 +257,21 @@ export default function InterrogationConduit() {
         </AnimatePresence>
 
         {/* Action Button Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {/* Action 1: Question Alibi */}
           <button
-            onClick={() => handleAction(`"Walk me through your exact movements during the fatal window again."`)}
+            onClick={() => handleAction(`"Walk me through your exact movements during the fatal window again. Every second."`)}
             disabled={isProcessing}
-            className="py-2 px-2.5 bg-[#160F0B] hover:bg-[#221812] border border-[#3B2A1E] hover:border-zinc-500 text-[10px] text-neutral-300 hover:text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-40"
+            className="py-2 px-2 bg-[#151313] hover:bg-[#1E1917] border border-[#570B12] hover:border-[#9D101D] text-[10px] text-[#C3B69C] hover:text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-40"
           >
             1. Press Alibi
           </button>
 
           {/* Action 2: Challenge Hidden Secret */}
           <button
-            onClick={() => handleAction(`"We found private correspondence referencing offshore accounts and forged documents. What aren't you telling us?"`)}
+            onClick={() => handleAction(`"We found private correspondence and transaction slips. What aren't you telling us?"`)}
             disabled={isProcessing}
-            className="py-2 px-2.5 bg-[#160F0B] hover:bg-[#221812] border border-[#3B2A1E] hover:border-zinc-500 text-[10px] text-neutral-300 hover:text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-40"
+            className="py-2 px-2 bg-[#151313] hover:bg-[#1E1917] border border-[#570B12] hover:border-[#9D101D] text-[10px] text-[#C3B69C] hover:text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-40"
           >
             2. Challenge Secret
           </button>
@@ -280,18 +280,36 @@ export default function InterrogationConduit() {
           <button
             onClick={() => setShowEvidenceSelector(!showEvidenceSelector)}
             disabled={isProcessing}
-            className="py-2 px-2.5 bg-[#1C120C] hover:bg-[#2A180E] border border-[#8A6830] text-[10px] text-[#EDE8D5] uppercase tracking-wider rounded-sm transition-colors cursor-pointer font-bold disabled:opacity-40"
+            className="py-2 px-2 bg-[#570B12] hover:bg-[#9D101D] border border-[#D21F2B] text-[10px] text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer font-bold disabled:opacity-40 shadow"
           >
             3. Present Clue
           </button>
 
-          {/* Action 4: Final Confrontation */}
+          {/* Action 4: Strategic Bluff */}
           <button
-            onClick={() => handleAction(`"The forensic evidence is airtight. Step forward and confess before the indictment is delivered to the prosecutor."`)}
+            onClick={() => handleAction(`"Forensics ran chemical residue tests on the crime scene doorknob. The results are already on their way."`)}
             disabled={isProcessing}
-            className="py-2 px-2.5 bg-[#2A0808] hover:bg-[#400B0B] border border-[#8B0000] text-[10px] text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer font-bold disabled:opacity-40"
+            className="py-2 px-2 bg-[#151313] hover:bg-[#1E1917] border border-[#74777C] hover:border-white text-[10px] text-[#74777C] hover:text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-40"
           >
-            4. Force Breakdown
+            4. Strategic Bluff
+          </button>
+
+          {/* Action 5: Empathy / De-escalation */}
+          <button
+            onClick={() => handleAction(`"I understand you felt cornered by the victim. If someone else forced your hand, now is the time to speak."`)}
+            disabled={isProcessing}
+            className="py-2 px-2 bg-[#151313] hover:bg-[#1E1917] border border-[#75866A] hover:border-emerald-500 text-[10px] text-[#75866A] hover:text-emerald-300 uppercase tracking-wider rounded-sm transition-colors cursor-pointer disabled:opacity-40"
+          >
+            5. Show Empathy
+          </button>
+
+          {/* Action 6: Final Confrontation */}
+          <button
+            onClick={() => handleAction(`"The forensic evidence is airtight. Step forward and confess before this goes to the grand jury."`)}
+            disabled={isProcessing}
+            className="py-2 px-2 bg-[#2A0808] hover:bg-[#570B12] border border-[#D21F2B] text-[10px] text-[#D21F2B] hover:text-white uppercase tracking-wider rounded-sm transition-colors cursor-pointer font-bold disabled:opacity-40 animate-pulse"
+          >
+            6. Force Breakdown
           </button>
         </div>
       </div>

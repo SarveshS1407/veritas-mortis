@@ -57,7 +57,22 @@ export default function CaseBriefingCinematic({
         currentCase?.suspects[1]?.name || "the prime suspect"
       }.\n\nHowever, in cases of this caliber, the obvious suspect is frequently a deliberate decoy. Interrogate all parties, deploy 365nm UV forensic tools, and construct an airtight evidence board.`,
       stamp: "ACTIVE DIRECTIVE",
-      actionLabel: "ENTER INVESTIGATION WORKSPACE [SPACE]",
+      actionLabel: "INSPECT FORENSIC VERACITY MATRIX [SPACE]",
+    },
+    {
+      title: "ESTABLISHED FACTS VS UNVERIFIED PARADOXES",
+      subtitle: "CONFIDENTIAL PROSECUTION BRIEF // CLASSIFIED",
+      body: `ESTABLISHED FORENSIC FACTS:\n• Decedent: ${
+        currentCase?.victim.name || "Arthur Blackwood"
+      } (${currentCase?.victim.age || 50}, ${
+        currentCase?.victim.occupation || "Citizen"
+      })\n• Discovery Scene: ${
+        currentCase?.crimeSceneLocation || "Designated Crime Scene"
+      }\n• Cause of Death: ${
+        currentCase?.victim.causeOfDeath || "Severe Trauma"
+      }\n• Assigned Detective: Lead Inquisitor (Badge #7401)\n\nUNVERIFIED CIRCUMSTANCES & OPEN PARADOXES:\n• Conflicting departure timestamps between witness statements and coroner lividity.\n• Suspect alibis remain uncorroborated by physical records.\n• Potential inside conspiracy indicated by switchboard intercept logs.\n\nAll detectives must independently authenticate evidence before filing grand jury indictments.`,
+      stamp: "CASE FILE OPEN",
+      actionLabel: "BREAK SEAL & ENTER LIVING CRIME SCENE [SPACE]",
     },
   ];
 

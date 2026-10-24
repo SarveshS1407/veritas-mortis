@@ -471,12 +471,24 @@ export default function EvidenceBoard() {
 
               <div className="mt-5 pt-3 border-t border-[#1A1817]/20 flex justify-between items-center text-[9px] font-mono text-neutral-600">
                 <span>VERITAS MORTIS CRIME ARCHIVE</span>
-                <button
-                  onClick={() => setInspectedItem(null)}
-                  className="font-bold text-[#8B0000] hover:underline"
-                >
-                  Close Inspection →
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      forensicAudio.playTapeBeep();
+                      setInspectedItem(null);
+                      setWorkspaceMode("interrogation");
+                    }}
+                    className="px-3 py-1 bg-[#570B12] hover:bg-[#9D101D] text-white text-[9px] uppercase font-bold tracking-wider rounded-sm transition-colors cursor-pointer shadow"
+                  >
+                    Confront in Interrogation →
+                  </button>
+                  <button
+                    onClick={() => setInspectedItem(null)}
+                    className="font-bold text-[#8B0000] hover:underline cursor-pointer"
+                  >
+                    Close ✕
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

@@ -24,7 +24,22 @@ import type {
   InterrogationResult,
   IndictmentPayload,
   VerificationResult,
+  LocationId,
+  LocationHotspot,
+  InvestigationLocation,
+  NotebookTabType,
+  NotebookNote,
+  DetectiveScoreReport,
 } from "./caseEngine";
+
+export type {
+  LocationId,
+  LocationHotspot,
+  InvestigationLocation,
+  NotebookTabType,
+  NotebookNote,
+  DetectiveScoreReport,
+};
 
 // Backward compatibility aliases
 export type ForensicCategory =
@@ -109,7 +124,13 @@ export interface IndictmentSubmission {
   totalEvidenceCount: number;
 }
 
-export type WorkspaceMode = "interrogation" | "document_inspection" | "indictment" | "evidence_board";
+export type WorkspaceMode =
+  | "location_investigation"
+  | "evidence_board"
+  | "interrogation"
+  | "notebook"
+  | "indictment"
+  | "document_inspection";
 
 export interface GameState {
   currentCase: CaseData | null;
@@ -117,6 +138,7 @@ export interface GameState {
   error: string | null;
   activeForensicTool: ForensicToolType;
   workspaceMode: WorkspaceMode;
+  currentLocationId: import("./caseEngine").LocationId;
   activeSuspectId: string | null;
   activeEvidenceId: string | null;
   currentAct: ActPhase;
@@ -128,10 +150,16 @@ export interface GameState {
   verdict: CaseVerdict | null;
   hasCompletedIntroGuide: boolean;
   isGuideOpen: boolean;
+  isNotebookOpen: boolean;
+  notebookNotes: import("./caseEngine").NotebookNote[];
+  suspectTrust: Record<string, number>;
+  suspectHostility: Record<string, number>;
 
   // Store Actions
   generateNewCase: (seed?: number) => Promise<void>;
   setWorkspaceMode: (mode: WorkspaceMode) => void;
+  setCurrentLocation: (locId: import("./caseEngine").LocationId) => void;
+  examineHotspot: (hotspotId: string) => void;
   setActiveSuspect: (id: string | null) => void;
   setActiveEvidence: (id: string | null) => void;
   examineEvidence: (id: string) => void;
@@ -144,5 +172,9 @@ export interface GameState {
   submitAccusation: (accusation: Accusation) => void;
   setHasCompletedIntroGuide: (completed: boolean) => void;
   toggleGuide: () => void;
+  setNotebookOpen: (open: boolean) => void;
+  addNotebookNote: (note: Omit<import("./caseEngine").NotebookNote, "id" | "timestamp">) => void;
+  requestHint: (tier: 1 | 2 | 3) => { text: string; tier: number };
+  getScoreReport: () => import("./caseEngine").DetectiveScoreReport;
   resetGame: () => void;
 }

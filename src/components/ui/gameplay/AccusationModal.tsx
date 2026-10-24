@@ -121,9 +121,32 @@ export default function AccusationModal({
               </div>
             </div>
 
-            {/* Narrative Epilogue Chronicle */}
-            <div className="bg-[#E4DBC5] p-4 border-l-4 border-[#8B0000] mb-8 font-serif text-xs md:text-sm text-neutral-800 leading-relaxed max-h-48 overflow-y-auto">
-              <p className="font-mono text-[9px] font-bold text-[#8B0000] uppercase mb-1">
+            {/* Narrative Epilogue Chronicle & Ending Classification */}
+            <div className="bg-[#E4DBC5] p-4 border-l-4 border-[#9D101D] mb-8 font-serif text-xs md:text-sm text-neutral-800 leading-relaxed max-h-56 overflow-y-auto">
+              <div className="flex items-center justify-between mb-2 pb-1 border-b border-black/10">
+                <span className="font-mono text-[9px] font-bold text-[#9D101D] uppercase">
+                  JUDICIAL OUTCOME CLASSIFICATION:
+                </span>
+                <span className="font-mono text-[9px] font-black uppercase text-neutral-700">
+                  {verdict.grade === "A" && "🏆 GRADE A · IRONCLAD CONVICTION"}
+                  {verdict.grade === "B" && "⚖️ GRADE B · CIRCUMSTANTIAL INDICTMENT"}
+                  {verdict.grade === "C" && "📁 GRADE C · COLD CASE ARCHIVE"}
+                  {verdict.grade === "F" && "⚠️ GRADE F · TRAGIC MISCARRIAGE OF JUSTICE"}
+                </span>
+              </div>
+
+              <div className="mb-3 italic text-neutral-900 bg-white/40 p-2.5 rounded-sm border border-neutral-300">
+                {verdict.grade === "A" &&
+                  "The grand jury returns an immediate unanimous indictment. Confronted with your airtight forensic proof and shattered alibi, the culprit broke down in open court, leaving zero grounds for appeal. Justice was executed with chilling precision."}
+                {verdict.grade === "B" &&
+                  "The true killer was indicted, but the defense counsel exploited minor evidentiary gaps in the forensic chain of custody. The perpetrator was convicted on lesser manslaughter counts, avoiding capital indictment due to circumstantial proof."}
+                {verdict.grade === "C" &&
+                  "The grand jury fails to find sufficient probable cause. The investigation has been suspended and remanded to the cold-case ledgers. The killer slips back into the shadows of the rain-slicked city."}
+                {verdict.grade === "F" &&
+                  "A catastrophic miscarriage of justice. An innocent citizen has been falsely condemned based on premature deductions, while the actual mastermind walked out of the precinct free, untouchable, and laughing in the dark."}
+              </div>
+
+              <p className="font-mono text-[9px] font-bold text-[#9D101D] uppercase mb-1">
                 SECRET CASE CHRONICLE & EPILOGUE:
               </p>
               {verdict.narrativeSummary || currentCase.secretTruth?.fullNarrativeChronicle}

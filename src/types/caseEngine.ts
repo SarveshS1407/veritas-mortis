@@ -126,6 +126,70 @@ export interface EvidenceNode {
   stampLabel?: string;
   coordinates: { x: number; y: number };
   boardPosition?: { x: number; y: number };
+  discoveryLocation?: string;
+  conditionalDiscoveries?: string[];
+}
+
+// ── 5.5 Investigation Locations & Hotspots ──
+export type LocationId =
+  | "crime_scene"
+  | "victim_residence"
+  | "forensic_lab"
+  | "police_archive"
+  | "interrogation_room"
+  | "restricted_site";
+
+export interface LocationHotspot {
+  id: string;
+  label: string;
+  coordinates: { x: number; y: number }; // percentage 0-100 on scene canvas
+  type: "examine" | "search" | "biological" | "uv_scan" | "audio" | "document";
+  icon: string;
+  description: string;
+  isExamined: boolean;
+  unlockedEvidenceId?: string;
+  leadsToNote?: string;
+  discoveredClueText?: string;
+}
+
+export interface InvestigationLocation {
+  id: LocationId;
+  name: string;
+  subtitle: string;
+  description: string;
+  atmosphereTone: string;
+  unlockedInAct: ActPhase;
+  isLocked?: boolean;
+  unlockCondition?: string;
+  hotspots: LocationHotspot[];
+}
+
+// ── 5.6 Detective Notebook & Score ──
+export type NotebookTabType = "facts" | "leads" | "contradictions" | "hypotheses";
+
+export interface NotebookNote {
+  id: string;
+  category: "fact" | "lead" | "contradiction" | "hypothesis";
+  title: string;
+  text: string;
+  timestamp: string;
+  associatedSuspectId?: string;
+  associatedEvidenceId?: string;
+  isVerified?: boolean;
+}
+
+export interface DetectiveScoreReport {
+  totalScore: number;
+  grade: VerdictGrade;
+  title: string;
+  evidenceDiscovered: number;
+  totalEvidence: number;
+  contradictionsShattered: number;
+  totalContradictions: number;
+  interrogationsHeld: number;
+  deductionAccuracyPercent: number;
+  unforcedErrors: number;
+  summaryNotes: string[];
 }
 
 // ── 6. Timeline & Chronology ──
@@ -181,6 +245,8 @@ export interface CaseGraph {
   actSummaries?: Record<ActPhase, string>;
   secretTruth: SecretTruth;
   solution?: SecretTruth;
+  locations?: InvestigationLocation[];
+  notebookNotes?: NotebookNote[];
   redStrings?: any[];
   createdAt?: string;
 }
